@@ -195,13 +195,75 @@ class WorkoutProgressNotifier extends StateNotifier<WorkoutProgress> {
     final allWorkouts = _ref.read(workoutsProvider);
     final unlocked = allWorkouts.where((w) => isUnlocked(w.id)).toList();
     
-    // Sort by least completed first
-    unlocked.sort((a, b) {
-      final aCount = getCompletionCount(a.id);
-      final bCount = getCompletionCount(b.id);
-      return aCount.compareTo(bCount);
-    });
-
-    return unlocked.take(3).toList();
+    if (unlocked.isEmpty) return [];
+    
+    // Get the last completed workout to avoid repeating
+    final lastCompletedId = _getLastCompletedWorkoutId();
+    
+    // Score each workout
+    final scored = unlocked.map((workout) {
+      double score = 0;
+      
+      // Prioritize unfinished workouts
+      final count = getCompletionCount(workout.id);
+      if (count == 0) {
+        score += 30; // Never done? Try it!
+      } else {
+        score -= count * 5; // Reduce score for over-done workouts
+      }
+      
+      // Avoid repeating last workout's category
+      if (lastCompletedId != null) {
+        final lastWorkout = _ref.read(workoutsProvider.notifier).getById(lastCompletedId);
+        if (lastWorkout != null && lastWorkout.workoutCategory != workout.workoutCategory) {
+          score += 15; // Different muscle group = higher priority
+        }
+      }
+      
+      // Boost challenge workouts if user has completed many normal ones
+      if (workout.isChallenge && state.totalWorkoutsCompleted >= 5) {
+        score += 20;
+      }
+      
+      // Slight boost for workouts at user's current level
+      final mostCompletedLevel = _getMostActiveLevel();
+      if (workout.level == mostCompletedLevel) {
+        score += 10;
+      }
+      
+      return MapEntry(workout, score);
+    }).toList();
+    
+    // Sort by score descending
+    scored.sort((a, b) => b.value.compareTo(a.value));
+    
+    return scored.take(3).map((e) => e.key).toList();
+  }
+  
+  /// Get the most recently completed workout ID
+  String? _getLastCompletedWorkoutId() {
+    if (state.completionCounts.isEmpty) return null;
+    // This is a simplification - ideally we'd track order
+    return state.completionCounts.entries.first.key;
+  }
+  
+  /// Get the level where user has completed most workouts
+  WorkoutLevel _getMostActiveLevel() {
+    final beginner = state.completionCounts.entries
+        .where((e) => e.key.startsWith('B'))
+        .fold(0, (sum, e) => sum + e.value);
+    final intermediate = state.completionCounts.entries
+        .where((e) => e.key.startsWith('I'))
+        .fold(0, (sum, e) => sum + e.value);
+    final advanced = state.completionCounts.entries
+        .where((e) => e.key.startsWith('A'))
+        .fold(0, (sum, e) => sum + e.value);
+    
+    if (advanced >= intermediate && advanced >= beginner) {
+      return WorkoutLevel.advanced;
+    } else if (intermediate >= beginner) {
+      return WorkoutLevel.intermediate;
+    }
+    return WorkoutLevel.beginner;
   }
 }

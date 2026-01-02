@@ -19,6 +19,7 @@ import '../tracking/tracking_screen.dart';
 import '../journal/journal_screen.dart';
 import '../support/support_screen.dart';
 import '../review/review_screen.dart';
+import '../workouts/workout_calendar_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -316,6 +317,7 @@ class DashboardScreen extends ConsumerWidget {
     final links = [
       _QuickLink(Icons.restaurant_rounded, 'Meals', Colors.orange, const MealsScreen()),
       _QuickLink(Icons.fitness_center_rounded, 'Workouts', Colors.blue, const WorkoutsScreen()),
+      _QuickLink(Icons.calendar_month_rounded, 'Calendar', Colors.pink, const WorkoutCalendarScreen()),
       _QuickLink(Icons.show_chart_rounded, 'Tracking', Colors.green, const TrackingScreen()),
       _QuickLink(Icons.book_rounded, 'Journal', Colors.purple, const JournalScreen()),
       _QuickLink(Icons.favorite_rounded, 'Support', Colors.red, const SupportScreen()),
