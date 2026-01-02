@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:confetti/confetti.dart';
 import '../../models/workout.dart';
 import '../../providers/workouts_provider.dart';
 import '../../providers/workout_progress_provider.dart';
@@ -24,11 +26,20 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
   bool _isRunning = false;
   Timer? _timer;
   int _totalElapsedSeconds = 0;
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _resetExercise();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _confettiController.dispose();
+    super.dispose();
   }
 
   void _resetExercise() {
@@ -88,63 +99,204 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
   }
 
   void _showHighFive(List<String> newlyUnlocked) {
+    _confettiController.play();
+    
     final allWorkouts = ref.read(workoutsProvider);
     final unlockedWorkouts = newlyUnlocked
         .map((id) => allWorkouts.firstWhere((w) => w.id == id, orElse: () => allWorkouts.first))
         .toList();
 
-    showDialog(
+    showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Center(child: Text("🙌 HIGH FIVE!")),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) {
+        return Stack(
           children: [
-            const Text(
-              "High five, sweat pal – we're getting stronger!",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontStyle: FontStyle.italic),
-            ),
-            const SizedBox(height: 20),
-            Text("Duration: ${(_totalElapsedSeconds/60).ceil()} mins"),
-            if (unlockedWorkouts.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              const Divider(),
-              const SizedBox(height: 12),
-              const Text(
-                "🔓 UNLOCKED!",
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
+            // Confetti overlay
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirection: pi / 2,
+                maxBlastForce: 5,
+                minBlastForce: 2,
+                emissionFrequency: 0.05,
+                numberOfParticles: 50,
+                gravity: 0.1,
+                shouldLoop: false,
+                colors: const [
+                  Colors.pink,
+                  Colors.pinkAccent,
+                  Colors.purple,
+                  Colors.amber,
+                  Colors.cyan,
+                  Colors.green,
+                ],
               ),
-              const SizedBox(height: 8),
-              ...unlockedWorkouts.map((w) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.fitness_center_rounded, size: 16, color: Colors.pink),
-                    const SizedBox(width: 8),
-                    Text(w.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              )),
-            ],
-          ],
-        ),
-        actions: [
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // dialog
-                Navigator.of(context).pop(); // timer screen
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.pinkPastel),
-              child: const Text("Awesome!"),
             ),
-          ),
-        ],
-      ),
+            // Dialog
+            Center(
+              child: Material(
+                color: Colors.transparent,
+                child: ScaleTransition(
+                  scale: CurvedAnimation(
+                    parent: anim1,
+                    curve: Curves.elasticOut,
+                  ),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.white, Colors.pink.shade50],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.pink.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Trophy emoji
+                        const Text(
+                          "🏆",
+                          style: TextStyle(fontSize: 64),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "HIGH FIVE!",
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.pink,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "You crushed ${widget.workout.title}!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Stats row
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildStatPill("⏱", "${(_totalElapsedSeconds / 60).ceil()}", "mins"),
+                              Container(width: 1, height: 30, color: Colors.grey[300]),
+                              _buildStatPill("🔥", "${widget.workout.exercises.length}", "exercises"),
+                            ],
+                          ),
+                        ),
+                        // Unlocked workouts
+                        if (unlockedWorkouts.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.amber.shade200),
+                            ),
+                            child: Column(
+                              children: [
+                                const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.lock_open_rounded, color: Colors.amber, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "NEW UNLOCKED!",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amber,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ...unlockedWorkouts.map((w) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  child: Text(
+                                    w.title,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        // CTA Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              HapticFeedback.mediumImpact();
+                              Navigator.of(context).pop();
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.pink,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              "Awesome! 🙌",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatPill(String emoji, String value, String label) {
+    return Column(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 20)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+        ),
+      ],
     );
   }
 
@@ -163,12 +315,6 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 
   @override
