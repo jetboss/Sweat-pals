@@ -2,6 +2,49 @@ import 'package:hive/hive.dart';
 
 part 'workout.g.dart';
 
+/// Difficulty levels for workouts
+@HiveType(typeId: 13)
+enum WorkoutLevel {
+  @HiveField(0)
+  beginner,
+  @HiveField(1)
+  intermediate,
+  @HiveField(2)
+  advanced,
+}
+
+/// Equipment requirements
+@HiveType(typeId: 14)
+enum Equipment {
+  @HiveField(0)
+  none,
+  @HiveField(1)
+  dumbbells,
+  @HiveField(2)
+  resistanceBands,
+  @HiveField(3)
+  gym,
+}
+
+/// Workout categories
+@HiveType(typeId: 15)
+enum WorkoutCategory {
+  @HiveField(0)
+  fullBody,
+  @HiveField(1)
+  upper,
+  @HiveField(2)
+  lower,
+  @HiveField(3)
+  core,
+  @HiveField(4)
+  hiit,
+  @HiveField(5)
+  mobility,
+  @HiveField(6)
+  challenge,
+}
+
 @HiveType(typeId: 10)
 class Exercise {
   @HiveField(0)
@@ -47,10 +90,31 @@ class Workout {
   final List<Exercise> exercises;
   
   @HiveField(4)
-  final String category; // Strength, Fat Loss, Mobility
-
+  final String category; // Legacy - keep for compatibility
+  
   @HiveField(5)
   final String? imageUrl;
+
+  @HiveField(6)
+  final WorkoutLevel level;
+
+  @HiveField(7)
+  final int durationMinutes;
+
+  @HiveField(8)
+  final Equipment equipment;
+
+  @HiveField(9)
+  final WorkoutCategory workoutCategory;
+
+  @HiveField(10)
+  final int unlockRequirement; // Number of completions needed to unlock (0 = always unlocked)
+
+  @HiveField(11)
+  final String? unlockWorkoutId; // If set, must complete this workout X times to unlock
+
+  @HiveField(12)
+  final bool isChallenge;
 
   const Workout({
     required this.id,
@@ -59,11 +123,48 @@ class Workout {
     required this.exercises,
     required this.category,
     this.imageUrl,
+    this.level = WorkoutLevel.beginner,
+    this.durationMinutes = 15,
+    this.equipment = Equipment.none,
+    this.workoutCategory = WorkoutCategory.fullBody,
+    this.unlockRequirement = 0,
+    this.unlockWorkoutId,
+    this.isChallenge = false,
   });
 
   int get totalDurationMinutes {
     int totalSeconds = exercises.fold(0, (sum, ex) => sum + (ex.durationSeconds > 0 ? ex.durationSeconds : 30)); // 30s avg for rep-based
     return (totalSeconds / 60).ceil();
+  }
+
+  String get levelDisplayName {
+    switch (level) {
+      case WorkoutLevel.beginner:
+        return 'Beginner';
+      case WorkoutLevel.intermediate:
+        return 'Intermediate';
+      case WorkoutLevel.advanced:
+        return 'Advanced';
+    }
+  }
+
+  String get categoryDisplayName {
+    switch (workoutCategory) {
+      case WorkoutCategory.fullBody:
+        return 'Full Body';
+      case WorkoutCategory.upper:
+        return 'Upper Body';
+      case WorkoutCategory.lower:
+        return 'Lower Body';
+      case WorkoutCategory.core:
+        return 'Core';
+      case WorkoutCategory.hiit:
+        return 'HIIT';
+      case WorkoutCategory.mobility:
+        return 'Mobility';
+      case WorkoutCategory.challenge:
+        return 'Challenge';
+    }
   }
 }
 

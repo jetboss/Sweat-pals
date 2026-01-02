@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/workout.dart';
 import '../../providers/workouts_provider.dart';
+import '../../providers/workout_progress_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/exercise_video_player.dart';
 
@@ -76,12 +77,22 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
       totalDurationSeconds: _totalElapsedSeconds,
     );
     await ref.read(workoutsProvider.notifier).saveSession(session);
+    
+    // Track progress and check for unlocks
+    final newlyUnlocked = await ref.read(workoutProgressProvider.notifier).completeWorkout(widget.workout.id);
+    
     if (mounted) {
-      _showHighFive();
+      HapticFeedback.heavyImpact();
+      _showHighFive(newlyUnlocked);
     }
   }
 
-  void _showHighFive() {
+  void _showHighFive(List<String> newlyUnlocked) {
+    final allWorkouts = ref.read(workoutsProvider);
+    final unlockedWorkouts = newlyUnlocked
+        .map((id) => allWorkouts.firstWhere((w) => w.id == id, orElse: () => allWorkouts.first))
+        .toList();
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -98,6 +109,27 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
             ),
             const SizedBox(height: 20),
             Text("Duration: ${(_totalElapsedSeconds/60).ceil()} mins"),
+            if (unlockedWorkouts.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 12),
+              const Text(
+                "🔓 UNLOCKED!",
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
+              ),
+              const SizedBox(height: 8),
+              ...unlockedWorkouts.map((w) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.fitness_center_rounded, size: 16, color: Colors.pink),
+                    const SizedBox(width: 8),
+                    Text(w.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              )),
+            ],
           ],
         ),
         actions: [
