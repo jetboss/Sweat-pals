@@ -22,7 +22,7 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       reps: fields[2] as int,
       instructions: fields[3] as String,
       imageUrl: fields[4] as String?,
-      videoUrl: fields[5] as String?,
+      lottieUrl: fields[5] as String?,
     );
   }
 
@@ -41,7 +41,7 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       ..writeByte(4)
       ..write(obj.imageUrl)
       ..writeByte(5)
-      ..write(obj.videoUrl);
+      ..write(obj.lottieUrl);
   }
 
   @override

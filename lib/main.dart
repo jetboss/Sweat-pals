@@ -87,4 +87,5 @@ Future<void> _openBoxes() async {
   await Hive.openBox<MorningPrompt>(AppConstants.morningPromptBox);
   await Hive.openBox<WeeklyReview>(AppConstants.weeklyReviewBox);
   await Hive.openBox<ProgressPhoto>(AppConstants.progressPhotosBox);
+  await Hive.openBox<Workout>('custom_workouts');
 }

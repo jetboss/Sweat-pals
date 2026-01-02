@@ -5,6 +5,7 @@ class AppColors {
   // Primary Palette
   static const Color pinkPastel = Color(0xFFFCE4EC); // Colors.pink[50]
   static const Color pinkAccent = Color(0xFFF8BBD0); // Colors.pink[100]
+  static const Color primary = pinkAccent; // Main brand color
   
   // Accents for Motivation
   static const Color tealAccent = Color(0xFFB2DFDB); // Colors.teal[100]
@@ -12,7 +13,9 @@ class AppColors {
   
   // Neutral / Background
   static const Color scaffoldBackground = Color(0xFFFAFAFA);
+  static const Color background = scaffoldBackground;
   static const Color cardBackground = Colors.white;
+  static const Color cardSurface = Colors.white;
   
   // Text
   static const Color textPrimary = Color(0xFF424242);

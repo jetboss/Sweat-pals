@@ -12,7 +12,14 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
   }
 
   void _loadWorkouts() {
+    List<Workout> customWorkouts = [];
+    if (Hive.isBoxOpen('custom_workouts')) {
+      customWorkouts = Hive.box<Workout>('custom_workouts').values.toList();
+    }
+
     state = [
+      // ========== CUSTOM WORKOUTS ==========
+      ...customWorkouts,
       // ========== BEGINNER WORKOUTS (7) ==========
       ..._beginnerWorkouts(),
       // ========== INTERMEDIATE WORKOUTS (7) ==========
@@ -20,6 +27,18 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
       // ========== ADVANCED WORKOUTS (7) ==========
       ..._advancedWorkouts(),
     ];
+  }
+
+  Future<void> saveCustomWorkout(Workout workout) async {
+    final box = Hive.box<Workout>('custom_workouts');
+    await box.put(workout.id, workout);
+    _loadWorkouts();
+  }
+
+  Future<void> deleteCustomWorkout(String id) async {
+    final box = Hive.box<Workout>('custom_workouts');
+    await box.delete(id);
+    _loadWorkouts();
   }
 
   // ====== BEGINNER WORKOUTS ======

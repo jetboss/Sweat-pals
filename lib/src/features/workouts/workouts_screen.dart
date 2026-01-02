@@ -5,9 +5,13 @@ import '../../models/workout.dart';
 import '../../models/workout_progress.dart';
 import '../../providers/workouts_provider.dart';
 import '../../providers/workout_progress_provider.dart';
+import '../../providers/avatar_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/page_routes.dart';
 import 'workout_timer_screen.dart';
+import '../gamification/sweat_pal_avatar.dart';
+
+import 'create_workout_screen.dart';
 
 class WorkoutsScreen extends ConsumerStatefulWidget {
   const WorkoutsScreen({super.key});
@@ -88,6 +92,41 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // SweatPal Avatar
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: Column(
+                  children: [
+                    SweatPalAvatar(
+                      state: ref.watch(avatarProvider),
+                      size: 140,
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.local_fire_department, color: Colors.orange, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Level ${ref.watch(avatarProvider).level} • ${progress.currentStreak} Day Streak",
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // Stats Row
             _buildStatsRow(progress),
             const SizedBox(height: 24),
@@ -130,6 +169,17 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
             ],
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CreateWorkoutScreen()),
+          );
+        },
+        label: const Text('Create'),
+        icon: const Icon(Icons.add),
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -295,6 +345,20 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
                                 style: TextStyle(fontSize: 10, color: Colors.grey[500]),
                               ),
                             ),
+                          if (workout.isCustom)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: IconButton(
+                                onPressed: () => _confirmDelete(context, workout),
+                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                                tooltip: 'Delete',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                style: const ButtonStyle(
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                   ],
@@ -423,6 +487,33 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
       leading: const Icon(Icons.check_circle, color: Colors.teal),
       title: Text(workout.title),
       subtitle: Text("${session.completedAt.day}/${session.completedAt.month} • ${(session.totalDurationSeconds / 60).ceil()} mins"),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, Workout workout) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Workout'),
+        content: Text('Are you sure you want to delete "${workout.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(workoutsProvider.notifier).deleteCustomWorkout(workout.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Workout deleted')),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }

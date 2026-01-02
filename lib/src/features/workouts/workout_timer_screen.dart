@@ -8,8 +8,10 @@ import 'package:confetti/confetti.dart';
 import '../../models/workout.dart';
 import '../../providers/workouts_provider.dart';
 import '../../providers/workout_progress_provider.dart';
+import 'package:lottie/lottie.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/exercise_video_player.dart';
+import '../../services/audio_service.dart';
+import '../../services/sensory_service.dart';
 
 class WorkoutTimerScreen extends ConsumerStatefulWidget {
   final Workout workout;
@@ -24,9 +26,11 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
   int _currentExerciseIndex = 0;
   int _secondsLeft = 0;
   bool _isRunning = false;
+  bool _isResting = false; // New state for rest mode
   Timer? _timer;
   int _totalElapsedSeconds = 0;
   late ConfettiController _confettiController;
+  final WorkoutAudioService _audioService = WorkoutAudioService();
 
   @override
   void initState() {
@@ -39,16 +43,28 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
   void dispose() {
     _timer?.cancel();
     _confettiController.dispose();
+    _audioService.stop();
     super.dispose();
   }
 
-  void _resetExercise() {
+  void _resetExercise({bool autoStart = false}) {
     final ex = widget.workout.exercises[_currentExerciseIndex];
+    
+    // Announce exercise if autostarting or initializing
+    if (autoStart) {
+       _audioService.speak("Begin ${ex.name}");
+    }
+    
     setState(() {
+      _isResting = false;
       _secondsLeft = ex.durationSeconds > 0 ? ex.durationSeconds : 30; // 30s default for rep-based
       _isRunning = false;
     });
     _timer?.cancel();
+    if (autoStart) {
+      SensoryService().engage();
+      _toggleTimer();
+    }
   }
 
   void _toggleTimer() {
@@ -60,28 +76,83 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
           setState(() {
             _secondsLeft--;
             _totalElapsedSeconds++;
+            if (_secondsLeft > 0 && _secondsLeft <= 3) {
+              SensoryService().tick();
+            }
           });
         } else {
-          _nextExercise();
+          _handleTimerComplete();
         }
       });
     }
     setState(() => _isRunning = !_isRunning);
   }
 
+  void _handleTimerComplete() {
+    _timer?.cancel();
+    
+    if (_isResting) {
+      // Rest finished, start next exercise
+       if (_currentExerciseIndex < widget.workout.exercises.length - 1) {
+        setState(() {
+          _currentExerciseIndex++;
+        });
+        _resetExercise(autoStart: true);
+       } else {
+         _finishWorkout();
+       }
+    } else {
+      if (_currentExerciseIndex < widget.workout.exercises.length - 1) {
+        final nextExercise = widget.workout.exercises[_currentExerciseIndex + 1];
+        
+        // Announce Rest
+        _audioService.speak("Rest for ten seconds. Next up, ${nextExercise.name}");
+        
+        setState(() {
+          _isResting = true;
+          _secondsLeft = 10; // 10s rest
+          _isRunning = false;
+        });
+        _toggleTimer(); // Start rest timer
+        SensoryService().engage();
+      } else {
+        _finishWorkout();
+      }
+    }
+  }
+
   void _nextExercise() {
+    // Manual skip
     _timer?.cancel();
     if (_currentExerciseIndex < widget.workout.exercises.length - 1) {
       setState(() {
-        _currentExerciseIndex++;
-        _resetExercise();
+        // If skipping during rest, we actually just want to start the next exercise immediately
+        // If skipping during exercise, we move to next exercise (skipping rest for this one? or going to rest? Standard apps usually skip to next exercise).
+        // Let's Skip to Next Exercise immediately.
+        if (!_isResting) {
+          _currentExerciseIndex++;
+        }
+        // If we were resting, index was already pointing to 'previous', so we need to increment? 
+        // No, current logic: during rest, index is still on previous. 
+        // So we ALWAYS increment index.
+        else {
+          _currentExerciseIndex++; 
+        } 
+        
+        // Wait, if I am resting, index = 0. Next is 1.
+        // If I skip rest, I want index = 1.
+        // If I am exercising index = 0. Next is 1.
+        // If I skip exercise, I want index = 1.
+        // So always increment.
       });
+      _resetExercise(autoStart: true); // Manual skip usually implies wanting to start next
     } else {
       _finishWorkout();
     }
   }
 
   void _finishWorkout() async {
+    _audioService.speak("Workout complete! Congratulations!");
     final session = WorkoutSession(
       workoutId: widget.workout.id,
       completedAt: DateTime.now(),
@@ -93,7 +164,7 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
     final newlyUnlocked = await ref.read(workoutProgressProvider.notifier).completeWorkout(widget.workout.id);
     
     if (mounted) {
-      HapticFeedback.heavyImpact();
+      SensoryService().success();
       _showHighFive(newlyUnlocked);
     }
   }
@@ -300,27 +371,11 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
     );
   }
 
-  void _showVideoPlayer(BuildContext context, String url) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        contentPadding: EdgeInsets.zero,
-        backgroundColor: Colors.transparent,
-        content: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: ExerciseVideoPlayer(videoUrl: url),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final exercise = widget.workout.exercises[_currentExerciseIndex];
-    final progress = 1.0 - (_secondsLeft / (exercise.durationSeconds > 0 ? exercise.durationSeconds : 30));
+    final totalTime = _isResting ? 10 : (exercise.durationSeconds > 0 ? exercise.durationSeconds : 30);
+    final progress = 1.0 - (_secondsLeft / totalTime);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.workout.title)),
@@ -335,50 +390,67 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
                 style: const TextStyle(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 12),
-              Text(
-                exercise.name,
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.pink),
-                textAlign: TextAlign.center,
-              ),
+              if (_isResting) ...[
+                 const Text(
+                   "REST",
+                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.green),
+                   textAlign: TextAlign.center,
+                 ),
+                 const SizedBox(height: 12),
+                 if (_currentExerciseIndex < widget.workout.exercises.length - 1)
+                   Text(
+                     "Up Next: ${widget.workout.exercises[_currentExerciseIndex + 1].name}",
+                     style: const TextStyle(fontSize: 18, color: AppColors.textSecondary),
+                   ),
+              ] else ...[
+                 Text(
+                   exercise.name,
+                   style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.pink),
+                   textAlign: TextAlign.center,
+                 ),
+              ],
               const SizedBox(height: 24),
-              if (exercise.imageUrl != null)
-                Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: CachedNetworkImage(
-                        imageUrl: exercise.imageUrl!,
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          height: 180,
-                          color: Colors.grey[200],
-                          child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
+              // Show media for Next exercise if resting
+              Builder(
+                builder: (context) {
+                   final targetExercise = _isResting && (_currentExerciseIndex < widget.workout.exercises.length - 1)
+                       ? widget.workout.exercises[_currentExerciseIndex + 1]
+                       : exercise;
+                   
+                   if (targetExercise.lottieUrl != null) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: SizedBox(
+                          height: 220,
+                          child: Lottie.network(
+                            targetExercise.lottieUrl!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                                return const Center(child: Icon(Icons.error, color: Colors.grey));
+                            },
                           ),
                         ),
-                        errorWidget: (context, url, error) => Container(
-                          height: 180,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.fitness_center_rounded, size: 64, color: Colors.grey),
+                      );
+                   } else if (targetExercise.imageUrl != null) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: CachedNetworkImage(
+                          imageUrl: targetExercise.imageUrl!,
+                          height: 220,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            height: 220,
+                            color: Colors.grey[200],
+                            child: const Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: (context, url, error) => const SizedBox(height: 220, child: Center(child: Icon(Icons.error))),
                         ),
-                      ),
-                    ),
-                    if (exercise.videoUrl != null)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: IconButton.filled(
-                          onPressed: () => _showVideoPlayer(context, exercise.videoUrl!),
-                          icon: const Icon(Icons.play_circle_fill_rounded, size: 32),
-                          style: IconButton.styleFrom(backgroundColor: Colors.pink.withValues(alpha: 0.8)),
-                        ),
-                      ),
-                  ],
-                )
-              else
-                const SizedBox(height: 20),
+                      );
+                   }
+                   return const SizedBox(height: 20);
+                }
+              ),
               const SizedBox(height: 24),
               Stack(
                 alignment: Alignment.center,
@@ -389,8 +461,8 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
                     child: CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 12,
-                      color: Colors.pink[100],
-                      backgroundColor: Colors.pink[50],
+                      color: _isResting ? Colors.green[300] : Colors.pink[100],
+                      backgroundColor: _isResting ? Colors.green[50] : Colors.pink[50],
                     ),
                   ),
                   Column(
@@ -400,7 +472,7 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
                         style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        exercise.durationSeconds > 0 ? "SECONDS" : "REPS: ${exercise.reps}",
+                        _isResting ? "REST" : (exercise.durationSeconds > 0 ? "SECONDS" : "REPS: ${exercise.reps}"),
                         style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ],

@@ -63,7 +63,7 @@ class Exercise {
   final String? imageUrl;
   
   @HiveField(5)
-  final String? videoUrl;
+  final String? lottieUrl;
 
   const Exercise({
     required this.name,
@@ -71,7 +71,7 @@ class Exercise {
     this.reps = 0,
     required this.instructions,
     this.imageUrl,
-    this.videoUrl,
+    this.lottieUrl,
   });
 }
 
@@ -166,6 +166,8 @@ class Workout {
         return 'Challenge';
     }
   }
+
+  bool get isCustom => id.length > 10; // UUIDs are 36 chars, built-in IDs are short (e.g., "B1")
 }
 
 @HiveType(typeId: 12)
