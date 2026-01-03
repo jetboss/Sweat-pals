@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pedometer_provider.dart';
 import '../services/pedometer_service.dart';
 import '../theme/app_colors.dart';
+import '../features/walks/track_walk_screen.dart';
 
 /// Card widget displaying today's step count using phone's pedometer
 class StepCounterCard extends ConsumerWidget {
@@ -46,7 +47,7 @@ class StepCounterCard extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
+      builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -73,8 +74,11 @@ class StepCounterCard extends ConsumerWidget {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context);
-                  // TODO: Navigate to Track Walk screen
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TrackWalkScreen()),
+                  );
                 },
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('Track a Walk with GPS'),
