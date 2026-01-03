@@ -370,7 +370,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
                     const SizedBox(width: 8),
                     _buildChip(Colors.grey[200]!, workout.categoryDisplayName),
                     const SizedBox(width: 8),
-                    _buildChip(Colors.grey[200]!, '${workout.durationMinutes} min', icon: Icons.timer_outlined),
+                    _buildChip(Colors.grey[200]!, '${workout.totalDurationMinutes} min', icon: Icons.timer_outlined),
                   ],
                 ),
                 if (!isUnlocked) ...[

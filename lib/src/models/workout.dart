@@ -43,6 +43,8 @@ enum WorkoutCategory {
   mobility,
   @HiveField(6)
   challenge,
+  @HiveField(7)
+  lowImpact, // Knee-friendly, seated, floor exercises
 }
 
 @HiveType(typeId: 10)
@@ -65,6 +67,9 @@ class Exercise {
   @HiveField(5)
   final String? lottieUrl;
 
+  @HiveField(6)
+  final bool isLowImpact; // True = no jumping, minimal knee stress
+
   const Exercise({
     required this.name,
     this.durationSeconds = 0,
@@ -72,6 +77,7 @@ class Exercise {
     required this.instructions,
     this.imageUrl,
     this.lottieUrl,
+    this.isLowImpact = false,
   });
 }
 
@@ -164,8 +170,13 @@ class Workout {
         return 'Mobility';
       case WorkoutCategory.challenge:
         return 'Challenge';
+      case WorkoutCategory.lowImpact:
+        return '🦵 Low Impact';
     }
   }
+
+  /// Returns true if all exercises in the workout are low-impact (knee-friendly)
+  bool get isKneeFriendly => exercises.every((e) => e.isLowImpact);
 
   bool get isCustom => id.length > 10; // UUIDs are 36 chars, built-in IDs are short (e.g., "B1")
 }

@@ -21,9 +21,9 @@ class WorkoutProgressNotifier extends StateNotifier<WorkoutProgress> {
     if (box.isNotEmpty) {
       state = box.getAt(0) ?? const WorkoutProgress();
     } else {
-      // Initialize with beginner workouts unlocked
+      // Initialize with beginner and knee-friendly workouts unlocked
       state = const WorkoutProgress(
-        unlockedWorkoutIds: ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7'],
+        unlockedWorkoutIds: ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'KF1', 'KF2', 'KF3'],
         completionCounts: {},
       );
       _saveProgress();

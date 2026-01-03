@@ -22,6 +22,8 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
       ...customWorkouts,
       // ========== BEGINNER WORKOUTS (7) ==========
       ..._beginnerWorkouts(),
+      // ========== KNEE-FRIENDLY WORKOUTS (3) ==========
+      ..._kneeFriendlyWorkouts(),
       // ========== INTERMEDIATE WORKOUTS (7) ==========
       ..._intermediateWorkouts(),
       // ========== ADVANCED WORKOUTS (7) ==========
@@ -40,6 +42,79 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
     await box.delete(id);
     _loadWorkouts();
   }
+
+  // ====== KNEE-FRIENDLY WORKOUTS ======
+  List<Workout> _kneeFriendlyWorkouts() => [
+    // KF1: Gentle Strength (Beginner, 15 min)
+    const Workout(
+      id: 'KF1',
+      title: 'Gentle Strength',
+      description: 'Build strength without stressing your knees. Perfect for beginners or recovery days.',
+      category: 'Low Impact',
+      level: WorkoutLevel.beginner,
+      durationMinutes: 15,
+      equipment: Equipment.none,
+      workoutCategory: WorkoutCategory.lowImpact,
+      unlockRequirement: 0,
+      imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400',
+      exercises: [
+        Exercise(name: 'Seated Marches', durationSeconds: 60, instructions: 'Sit tall, alternate lifting knees. Keep core engaged.', isLowImpact: true),
+        Exercise(name: 'Chair Stand', reps: 10, instructions: 'Stand up from chair without using hands, sit back slowly.', isLowImpact: true),
+        Exercise(name: 'Glute Bridges', reps: 12, instructions: 'Lie on back, lift hips, squeeze glutes at top.', isLowImpact: true),
+        Exercise(name: 'Wall Sit', durationSeconds: 30, instructions: 'Back against wall, thighs parallel. Hold steady.', isLowImpact: true),
+        Exercise(name: 'Seated Leg Raises', reps: 10, instructions: 'Sit tall, extend one leg straight, hold 2 seconds. Each leg.', isLowImpact: true),
+        Exercise(name: 'Ankle Circles', durationSeconds: 30, instructions: 'Rotate each ankle slowly. Both directions.', isLowImpact: true),
+      ],
+    ),
+
+    // KF2: Floor Flow (Beginner, 20 min)
+    const Workout(
+      id: 'KF2',
+      title: 'Floor Flow',
+      description: 'Mobility and strength from the ground. Zero standing, zero knee stress.',
+      category: 'Low Impact',
+      level: WorkoutLevel.beginner,
+      durationMinutes: 20,
+      equipment: Equipment.none,
+      workoutCategory: WorkoutCategory.lowImpact,
+      unlockRequirement: 0,
+      imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400',
+      exercises: [
+        Exercise(name: 'Ankle Circles', durationSeconds: 30, instructions: 'Warm up ankles. 10 each direction per foot.', isLowImpact: true),
+        Exercise(name: 'Dead Bug', reps: 10, instructions: 'On back, extend opposite arm and leg. Core tight.', isLowImpact: true),
+        Exercise(name: 'Clamshells', reps: 12, instructions: 'Side-lying, knees bent. Lift top knee, keep feet together.', isLowImpact: true),
+        Exercise(name: 'Glute Bridges', reps: 15, instructions: 'Squeeze glutes hard at top. Pause 1 second.', isLowImpact: true),
+        Exercise(name: 'Bird Dog', reps: 10, instructions: 'All fours. Extend opposite arm and leg. Hold 2 seconds.', isLowImpact: true),
+        Exercise(name: 'Lying Leg Lifts', reps: 10, instructions: 'On back, legs straight. Lift both legs slowly, lower with control.', isLowImpact: true),
+        Exercise(name: 'Cat-Cow Stretch', durationSeconds: 45, instructions: 'Flow between arching and rounding back. Breathe deeply.', isLowImpact: true),
+      ],
+    ),
+
+    // KF3: Chair Cardio (Intermediate, 25 min)
+    const Workout(
+      id: 'KF3',
+      title: 'Chair Cardio',
+      description: 'Get your heart pumping without leaving your chair. Great for bad knee days.',
+      category: 'Low Impact',
+      level: WorkoutLevel.intermediate,
+      durationMinutes: 25,
+      equipment: Equipment.none,
+      workoutCategory: WorkoutCategory.lowImpact,
+      unlockRequirement: 0,
+      imageUrl: 'https://images.unsplash.com/photo-1541534741688-6078c6bc1590?w=400',
+      exercises: [
+        Exercise(name: 'Seated Marches', durationSeconds: 120, instructions: 'Fast pace! Pump those arms.', isLowImpact: true),
+        Exercise(name: 'Chair Stand', reps: 15, instructions: 'Control up, control down. No hands!', isLowImpact: true),
+        Exercise(name: 'Seated Leg Raises', reps: 15, instructions: 'Alternate legs. Keep core tight.', isLowImpact: true),
+        Exercise(name: 'Seated Punches', durationSeconds: 60, instructions: 'Alternate punches. Fast and controlled.', isLowImpact: true),
+        Exercise(name: 'Rest', durationSeconds: 30, instructions: 'Shake it out. Breathe.', isLowImpact: true),
+        Exercise(name: 'Seated Marches', durationSeconds: 120, instructions: 'Round 2! Push the pace.', isLowImpact: true),
+        Exercise(name: 'Chair Stand', reps: 15, instructions: 'Second set. Feel the burn!', isLowImpact: true),
+        Exercise(name: 'Seated Leg Raises', reps: 15, instructions: 'Last set. Finish strong!', isLowImpact: true),
+        Exercise(name: 'Cool Down Stretch', durationSeconds: 60, instructions: 'Light stretching. Well done!', isLowImpact: true),
+      ],
+    ),
+  ];
 
   // ====== BEGINNER WORKOUTS ======
   List<Workout> _beginnerWorkouts() => [
@@ -612,6 +687,11 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
   /// Get workouts by equipment
   List<Workout> getByEquipment(Equipment equipment) {
     return state.where((w) => w.equipment == equipment).toList();
+  }
+
+  /// Get knee-friendly (low-impact) workouts
+  List<Workout> getKneeFriendly() {
+    return state.where((w) => w.workoutCategory == WorkoutCategory.lowImpact).toList();
   }
 
   /// Get workout by ID

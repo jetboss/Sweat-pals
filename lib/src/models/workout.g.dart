@@ -23,13 +23,14 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       instructions: fields[3] as String,
       imageUrl: fields[4] as String?,
       lottieUrl: fields[5] as String?,
+      isLowImpact: fields[6] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Exercise obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       ..writeByte(4)
       ..write(obj.imageUrl)
       ..writeByte(5)
-      ..write(obj.lottieUrl);
+      ..write(obj.lottieUrl)
+      ..writeByte(6)
+      ..write(obj.isLowImpact);
   }
 
   @override
@@ -282,6 +285,8 @@ class WorkoutCategoryAdapter extends TypeAdapter<WorkoutCategory> {
         return WorkoutCategory.mobility;
       case 6:
         return WorkoutCategory.challenge;
+      case 7:
+        return WorkoutCategory.lowImpact;
       default:
         return WorkoutCategory.fullBody;
     }
@@ -310,6 +315,9 @@ class WorkoutCategoryAdapter extends TypeAdapter<WorkoutCategory> {
         break;
       case WorkoutCategory.challenge:
         writer.writeByte(6);
+        break;
+      case WorkoutCategory.lowImpact:
+        writer.writeByte(7);
         break;
     }
   }
