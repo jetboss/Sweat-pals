@@ -25,7 +25,7 @@ android {
         applicationId = "com.example.sweatpals.sweat_pals"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 34  // Android 14+ only (Health Connect built-in)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

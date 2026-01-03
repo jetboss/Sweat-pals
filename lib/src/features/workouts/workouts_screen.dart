@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../utils/page_routes.dart';
 import 'workout_timer_screen.dart';
 import '../gamification/sweat_pal_avatar.dart';
+import '../../widgets/walking_stats_card.dart';
 
 import 'create_workout_screen.dart';
 
@@ -126,6 +127,11 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
                 ),
               ),
             ),
+
+            // TODO: Walking Stats Card - Shelved due to Samsung Health → Health Connect sync issues
+            // Re-enable when Samsung improves their Health Connect integration
+            // const WalkingStatsCard(),
+            // const SizedBox(height: 16),
 
             // Stats Row
             _buildStatsRow(progress),

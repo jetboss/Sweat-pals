@@ -55,5 +55,10 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- HealthKit Permissions -->
+		<key>NSHealthShareUsageDescription</key>
+		<string>SweatPals reads your step count and walking distance to track your fitness progress automatically.</string>
+		<key>NSHealthUpdateUsageDescription</key>
+		<string>SweatPals records your workout data to Apple Health.</string>
 	</dict>
 </plist>
