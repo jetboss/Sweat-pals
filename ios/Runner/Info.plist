@@ -60,5 +60,13 @@
 		<string>SweatPals reads your step count and walking distance to track your fitness progress automatically.</string>
 		<key>NSHealthUpdateUsageDescription</key>
 		<string>SweatPals records your workout data to Apple Health.</string>
+		<!-- Motion/Pedometer Permissions -->
+		<key>NSMotionUsageDescription</key>
+		<string>SweatPals counts your steps to track walking progress.</string>
+		<!-- Location Permissions -->
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>SweatPals tracks your walking route when you start a walk.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>SweatPals tracks your walking route even when the app is in the background.</string>
 	</dict>
 </plist>

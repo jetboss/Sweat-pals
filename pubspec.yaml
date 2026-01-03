@@ -34,7 +34,14 @@ dependencies:
   audioplayers: ^5.2.1 # Simple SFX playback
   flutter_tts: ^4.2.3
   audio_session: ^0.1.21
-  health: ^11.0.0  # HealthKit (iOS) + Health Connect (Android)
+  health: ^11.0.0  # HealthKit (iOS) + Health Connect (Android) - shelved
+  
+  # Walk Tracking
+  pedometer_2: ^5.0.4        # Step counting from phone sensor
+  geolocator: ^13.0.2        # GPS location tracking
+  flutter_map: ^7.0.2        # OpenStreetMap (no API key needed)
+  latlong2: ^0.9.1           # Lat/Long utilities
+  permission_handler: ^11.3.1 # Runtime permissions
 
 dev_dependencies:
   flutter_test:
