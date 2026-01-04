@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:pedometer_2/pedometer_2.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service for counting steps using phone's accelerometer sensor
 class PedometerService {
@@ -13,10 +12,8 @@ class PedometerService {
   PedometerService._();
   
   final Pedometer _pedometer = Pedometer();
-  StreamSubscription<int>? _stepSubscription;
+  Timer? _refreshTimer;
   final _stepController = StreamController<int>.broadcast();
-  
-  int _lastStepCount = 0;
   
   /// Stream of today's step count updates
   Stream<int> get stepCountStream => _stepController.stream;
@@ -39,7 +36,7 @@ class PedometerService {
   
   /// Start listening to step events
   Future<void> startListening() async {
-    if (_stepSubscription != null) return; // Already listening
+    if (_refreshTimer != null) return; // Already listening
     
     final granted = await requestPermission();
     if (!granted) {
@@ -48,46 +45,36 @@ class PedometerService {
       return;
     }
     
-    // Get today's step count first
-    await _getTodaySteps();
+    // Get today's step count immediately
+    await _refreshTodaySteps();
     
-    // Listen to real-time step count stream
-    _stepSubscription = _pedometer.stepCountStream().listen(
-      (int steps) {
-        _lastStepCount = steps;
-        _stepController.add(steps);
-        debugPrint('Steps since boot: $steps');
-      },
-      onError: (error) {
-        debugPrint('Pedometer error: $error');
-        _stepController.addError(error);
-      },
-    );
+    // Poll every 10 seconds for updated step count
+    // Using getStepCount with date range gives accurate "today" count
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      await _refreshTodaySteps();
+    });
     
-    debugPrint('Pedometer started listening');
+    debugPrint('Pedometer started listening (polling every 10s)');
   }
   
-  /// Get today's step count
-  Future<void> _getTodaySteps() async {
+  /// Refresh today's step count
+  Future<void> _refreshTodaySteps() async {
     try {
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-      
-      final steps = await _pedometer.getStepCount(from: midnight, to: now);
-      _lastStepCount = steps;
+      final steps = await getTodaySteps();
       _stepController.add(steps);
       debugPrint('Today steps: $steps');
     } catch (e) {
-      debugPrint('Error getting today steps: $e');
+      debugPrint('Error refreshing steps: $e');
     }
   }
   
-  /// Get steps for today (call directly)
+  /// Get steps for today only (midnight to now)
   Future<int> getTodaySteps() async {
     try {
       final now = DateTime.now();
       final midnight = DateTime(now.year, now.month, now.day);
-      return await _pedometer.getStepCount(from: midnight, to: now);
+      final steps = await _pedometer.getStepCount(from: midnight, to: now);
+      return steps;
     } catch (e) {
       debugPrint('Error getting today steps: $e');
       return 0;
@@ -96,8 +83,8 @@ class PedometerService {
   
   /// Stop listening to step events
   void stopListening() {
-    _stepSubscription?.cancel();
-    _stepSubscription = null;
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
     debugPrint('Pedometer stopped listening');
   }
   

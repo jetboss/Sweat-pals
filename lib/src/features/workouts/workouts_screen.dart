@@ -10,7 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../utils/page_routes.dart';
 import 'workout_timer_screen.dart';
 import '../gamification/sweat_pal_avatar.dart';
-import '../../widgets/step_counter_card.dart';
+import '../../widgets/walk_workout_card.dart';
 
 import 'create_workout_screen.dart';
 
@@ -128,8 +128,8 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
               ),
             ),
 
-            // Step Counter Card (uses phone pedometer - no Samsung Health needed)
-            const StepCounterCard(),
+            // Walk Workout Card (step count + GPS tracking)
+            const WalkWorkoutCard(),
             const SizedBox(height: 16),
 
             // Stats Row
