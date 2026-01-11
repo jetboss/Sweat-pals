@@ -3,12 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import '../../models/workout.dart';
 import '../../providers/workouts_provider.dart';
 import '../../providers/workout_progress_provider.dart';
-import 'package:lottie/lottie.dart';
 import '../../theme/app_colors.dart';
 import '../../services/audio_service.dart';
 import '../../services/sensory_service.dart';
@@ -22,20 +20,35 @@ class WorkoutTimerScreen extends ConsumerStatefulWidget {
   ConsumerState<WorkoutTimerScreen> createState() => _WorkoutTimerScreenState();
 }
 
-class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
+class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with TickerProviderStateMixin {
   int _currentExerciseIndex = 0;
   int _secondsLeft = 0;
   bool _isRunning = false;
-  bool _isResting = false; // New state for rest mode
+  bool _isResting = false;
   Timer? _timer;
   int _totalElapsedSeconds = 0;
   late ConfettiController _confettiController;
   final WorkoutAudioService _audioService = WorkoutAudioService();
+  
+  // Immersive Animations
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
 
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    
+    // Setup breathing animation (simulates heart rate/breath)
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    
+    _breathingAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
+    );
+
     _resetExercise();
   }
 
@@ -44,22 +57,24 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
     _timer?.cancel();
     _confettiController.dispose();
     _audioService.stop();
+    _breathingController.dispose();
     super.dispose();
   }
 
   void _resetExercise({bool autoStart = false}) {
     final ex = widget.workout.exercises[_currentExerciseIndex];
-    
-    // Announce exercise if autostarting or initializing
-    if (autoStart) {
-       _audioService.speak("Begin ${ex.name}");
-    }
+    if (autoStart) _audioService.speak("Begin ${ex.name}");
     
     setState(() {
       _isResting = false;
-      _secondsLeft = ex.durationSeconds > 0 ? ex.durationSeconds : 30; // 30s default for rep-based
+      _secondsLeft = ex.durationSeconds > 0 ? ex.durationSeconds : 30;
       _isRunning = false;
     });
+    
+    // Calm breathing for setup
+    _breathingController.duration = const Duration(milliseconds: 2000);
+    _breathingController.repeat(reverse: true);
+
     _timer?.cancel();
     if (autoStart) {
       SensoryService().engage();
@@ -70,7 +85,14 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
   void _toggleTimer() {
     if (_isRunning) {
       _timer?.cancel();
+      _breathingController.stop(); // Pause breathing on pause
     } else {
+      // Start immersive breathing based on state
+      _breathingController.duration = _isResting 
+          ? const Duration(milliseconds: 4000) // Slow deep breath for rest
+          : const Duration(milliseconds: 800); // Fast pump for work
+      _breathingController.repeat(reverse: true);
+
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (_secondsLeft > 0) {
           setState(() {
@@ -185,7 +207,6 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
       pageBuilder: (context, anim1, anim2) {
         return Stack(
           children: [
-            // Confetti overlay
             Align(
               alignment: Alignment.topCenter,
               child: ConfettiWidget(
@@ -197,83 +218,34 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
                 numberOfParticles: 50,
                 gravity: 0.1,
                 shouldLoop: false,
-                colors: const [
-                  Colors.pink,
-                  Colors.pinkAccent,
-                  Colors.purple,
-                  Colors.amber,
-                  Colors.cyan,
-                  Colors.green,
-                ],
+                colors: const [Colors.pink, Colors.cyan, Colors.amber],
               ),
             ),
-            // Dialog
             Center(
               child: Material(
                 color: Colors.transparent,
                 child: ScaleTransition(
-                  scale: CurvedAnimation(
-                    parent: anim1,
-                    curve: Curves.elasticOut,
-                  ),
+                  scale: CurvedAnimation(parent: anim1, curve: Curves.elasticOut),
                   child: Container(
                     width: MediaQuery.of(context).size.width * 0.85,
                     padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.white, Colors.pink.shade50],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.pink.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Trophy emoji
-                        const Text(
-                          "🏆",
-                          style: TextStyle(fontSize: 64),
-                        ),
+                        const Text("🏆", style: TextStyle(fontSize: 64)),
                         const SizedBox(height: 16),
-                        const Text(
-                          "HIGH FIVE!",
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.pink,
-                            letterSpacing: 1,
-                          ),
-                        ),
+                        const Text("HIGH FIVE!", style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 12),
-                        Text(
-                          "You crushed ${widget.workout.title}!",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        // Stats row
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               _buildStatPill("⏱", "${(_totalElapsedSeconds / 60).ceil()}", "mins"),
-                              Container(width: 1, height: 30, color: Colors.grey[300]),
                               _buildStatPill("🔥", "${widget.workout.exercises.length}", "exercises"),
                             ],
                           ),
@@ -318,28 +290,15 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
                           ),
                         ],
                         const SizedBox(height: 24),
-                        // CTA Button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () {
-                              HapticFeedback.mediumImpact();
-                              Navigator.of(context).pop();
-                              Navigator.of(context).pop();
+                                Navigator.of(context).pop();
+                                Navigator.of(context).pop();
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.pink,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              "Awesome! 🙌",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                            ),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                            child: const Text("Awesome!"),
                           ),
                         ),
                       ],
@@ -359,14 +318,8 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
       children: [
         Text(emoji, style: const TextStyle(fontSize: 20)),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-        ),
+        Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
       ],
     );
   }
@@ -377,150 +330,242 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> {
     final totalTime = _isResting ? 10 : (exercise.durationSeconds > 0 ? exercise.durationSeconds : 30);
     final progress = 1.0 - (_secondsLeft / totalTime);
 
+    // Dynamic Gradient based on state
+    final gradientColors = _isResting
+        ? [const Color(0xFF004D40), const Color(0xFF009688)] // Deep Teal for Rest
+        : _isRunning
+            ? [const Color(0xFFD50000), const Color(0xFFFF1744)] // Intense Red for Work
+            : [const Color(0xFF212121), const Color(0xFF424242)]; // Dark Gray for Pause/Idle
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.workout.title)),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Step ${_currentExerciseIndex + 1} of ${widget.workout.exercises.length}",
-                style: const TextStyle(color: AppColors.textSecondary),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(widget.workout.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          // 1. Animated Background
+          AnimatedContainer(
+            duration: const Duration(seconds: 1),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: gradientColors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(height: 12),
-              if (_isResting) ...[
-                 const Text(
-                   "REST",
-                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.green),
-                   textAlign: TextAlign.center,
-                 ),
-                 const SizedBox(height: 12),
-                 if (_currentExerciseIndex < widget.workout.exercises.length - 1)
-                   Text(
-                     "Up Next: ${widget.workout.exercises[_currentExerciseIndex + 1].name}",
-                     style: const TextStyle(fontSize: 18, color: AppColors.textSecondary),
-                   ),
-              ] else ...[
-                 Text(
-                   exercise.name,
-                   style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.pink),
-                   textAlign: TextAlign.center,
-                 ),
-              ],
-              const SizedBox(height: 24),
-              // Show media for Next exercise if resting
-              Builder(
-                builder: (context) {
-                   final targetExercise = _isResting && (_currentExerciseIndex < widget.workout.exercises.length - 1)
-                       ? widget.workout.exercises[_currentExerciseIndex + 1]
-                       : exercise;
-                   
-                   if (targetExercise.lottieUrl != null) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          height: 220,
-                          child: Lottie.network(
-                            targetExercise.lottieUrl!,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                                return const Center(child: Icon(Icons.error, color: Colors.grey));
-                            },
-                          ),
-                        ),
-                      );
-                   } else if (targetExercise.imageUrl != null) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: CachedNetworkImage(
-                          imageUrl: targetExercise.imageUrl!,
-                          height: 220,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            height: 220,
-                            color: Colors.grey[200],
-                            child: const Center(child: CircularProgressIndicator()),
-                          ),
-                          errorWidget: (context, url, error) => const SizedBox(height: 220, child: Center(child: Icon(Icons.error))),
-                        ),
-                      );
-                   }
-                   return const SizedBox(height: 20);
-                }
-              ),
-              const SizedBox(height: 24),
-              Stack(
-                alignment: Alignment.center,
+            ),
+          ),
+          
+          // 2. Sweat Particles (Simple Overlay)
+          if (_isRunning && !_isResting)
+             Positioned.fill(
+               child: Opacity(
+                 opacity: 0.1,
+                 child: Image.network("https://www.transparenttextures.com/patterns/stardust.png", repeat: ImageRepeat.repeat),
+               ),
+             ),
+
+          // 3. Main Content
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 250,
-                    height: 250,
-                    child: CircularProgressIndicator(
-                      value: progress,
-                      strokeWidth: 12,
-                      color: _isResting ? Colors.green[300] : Colors.pink[100],
-                      backgroundColor: _isResting ? Colors.green[50] : Colors.pink[50],
+                  // Header Info
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      _isResting ? "RECOVER" : "EXERCISE ${_currentExerciseIndex + 1}/${widget.workout.exercises.length}",
+                      style: const TextStyle(color: Colors.white, letterSpacing: 1.5, fontWeight: FontWeight.bold),
                     ),
                   ),
+                  const Spacer(),
+                  
+                  // Breathing Timer Ring
+                  AnimatedBuilder(
+                    animation: _breathingAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _isRunning ? _breathingAnimation.value : 1.0,
+                        child: child,
+                      );
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Glow
+                        Container(
+                          width: 300,
+                          height: 300,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withOpacity(_isResting ? 0.2 : 0.4),
+                                blurRadius: 60,
+                                spreadRadius: 10,
+                              )
+                            ],
+                          ),
+                        ),
+                        // Progress
+                        SizedBox(
+                          width: 280,
+                          height: 280,
+                          child: CircularProgressIndicator(
+                            value: progress,
+                            strokeWidth: 20,
+                            color: Colors.white,
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            strokeCap: StrokeCap.round,
+                          ),
+                        ),
+                        // Timer Text
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "$_secondsLeft",
+                              style: const TextStyle(
+                                fontSize: 100, 
+                                fontWeight: FontWeight.w900, 
+                                color: Colors.white,
+                                height: 0.9,
+                              ),
+                            ),
+                            Text(
+                              _isResting ? "REST" : (exercise.durationSeconds > 0 ? "SEC" : "REPS"),
+                              style: TextStyle(
+                                fontSize: 20, 
+                                fontWeight: FontWeight.bold, 
+                                color: Colors.white.withValues(alpha: 0.8)
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 48),
+                  
+                  // Exercise Name & Next Up
                   Column(
                     children: [
                       Text(
-                        _secondsLeft.toString(),
-                        style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
+                        _isResting 
+                            ? (_currentExerciseIndex < widget.workout.exercises.length - 1 
+                                ? "UP NEXT: ${widget.workout.exercises[_currentExerciseIndex + 1].name.toUpperCase()}" 
+                                : "ALMOST DONE!")
+                            : exercise.name.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 28, 
+                          fontWeight: FontWeight.w800, 
+                          color: Colors.white,
+                          fontFamily: 'Outfit', // Ensure our premium font usage
+                        ),
                       ),
-                      Text(
-                        _isResting ? "REST" : (exercise.durationSeconds > 0 ? "SECONDS" : "REPS: ${exercise.reps}"),
-                        style: const TextStyle(color: AppColors.textSecondary),
+                      const SizedBox(height: 8),
+                      // Instruction/Tip
+                      if (!_isResting)
+                        Text(
+                          exercise.instructions,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+                        ),
+                    ],
+                  ),
+                  
+                  const Spacer(),
+                  
+                  // Controls
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildGlassButton(
+                        icon: Icons.skip_previous_rounded,
+                        onTap: _currentExerciseIndex > 0 
+                            ? () {
+                                HapticFeedback.lightImpact();
+                                setState(() {
+                                  _currentExerciseIndex--;
+                                  _resetExercise();
+                                });
+                              } 
+                            : null,
+                      ),
+                      _buildPlayButton(),
+                      _buildGlassButton(
+                        icon: Icons.skip_next_rounded,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _nextExercise();
+                        },
                       ),
                     ],
                   ),
+                  const SizedBox(height: 40),
                 ],
               ),
-              const SizedBox(height: 48),
-              Text(
-                exercise.instructions,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton.filledTonal(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      if (_currentExerciseIndex > 0) {
-                        setState(() {
-                          _currentExerciseIndex--;
-                          _resetExercise();
-                        });
-                      }
-                    },
-                    icon: const Icon(Icons.skip_previous_rounded),
-                  ),
-                  FloatingActionButton.large(
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      _toggleTimer();
-                    },
-                    backgroundColor: AppColors.pinkPastel,
-                    child: Icon(_isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 48, color: Colors.pink[700]),
-                  ),
-                  IconButton.filledTonal(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      _nextExercise();
-                    },
-                    icon: const Icon(Icons.skip_next_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20), // Bottom spacer for scrolling
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassButton({required IconData icon, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        ),
+        child: Icon(icon, color: Colors.white, size: 32),
+      ),
+    );
+  }
+
+  Widget _buildPlayButton() {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        _toggleTimer();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.3),
+              blurRadius: 20,
+              spreadRadius: 5,
+            )
+          ],
+        ),
+        child: Icon(
+          _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          color: AppColors.primary,
+          size: 48,
         ),
       ),
     );

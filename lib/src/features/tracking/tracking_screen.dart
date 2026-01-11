@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'tracking_provider.dart';
 import 'daily_check_in_form.dart';
 import '../../utils/page_routes.dart';
+import '../../widgets/animated_streak_counter.dart';
+import '../../widgets/sweat_pal_card.dart';
 
 class TrackingScreen extends ConsumerWidget {
   const TrackingScreen({super.key});
@@ -32,82 +34,69 @@ class TrackingScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.pushAnimated(const DailyCheckInForm()),
-        label: const Text('Check-in'),
-        icon: const Icon(Icons.add_rounded),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 90),
+        child: FloatingActionButton.extended(
+          onPressed: () => context.pushAnimated(const DailyCheckInForm()),
+          label: const Text('Check-in'),
+          icon: const Icon(Icons.add_rounded),
+        ),
       ),
     );
   }
 
   Widget _buildStreakCard(BuildContext context, int streak) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.local_fire_department_rounded, size: 64, color: Colors.orange),
-          const SizedBox(height: 8),
-          Text(
-            '$streak Day Streak!',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Keep it up, pal!',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white70,
-                ),
-          ),
-        ],
-      ),
+    return AnimatedStreakCounter(
+      streak: streak,
+      onTap: () {
+        // Optional: Show detailed breakdown or confetti again
+      },
     );
   }
 
   Widget _buildEntryCard(BuildContext context, dynamic entry) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ExpansionTile(
-        title: Text(DateFormat('EEEE, MMM d').format(entry.date)),
-        subtitle: Row(
-          children: [
-            _buildSmallTag(context, entry.followedMealPlan ? 'Meal Plan' : 'No Meal', entry.followedMealPlan),
-            const SizedBox(width: 8),
-            _buildSmallTag(context, entry.exerciseCompleted ? 'Exercise' : 'No Exercise', entry.exerciseCompleted),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: SweatPalCard(
+        padding: EdgeInsets.zero, // ExpansionTile has its own padding
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            title: Text(
+              DateFormat('EEEE, MMM d').format(entry.date),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Row(
               children: [
-                if (entry.mealPlanNotes.isNotEmpty) ...[
-                  Text('Notes: ${entry.mealPlanNotes}'),
-                  const SizedBox(height: 8),
-                ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Sleep: ${entry.sleepHours.toStringAsFixed(1)}h'),
-                    Text('Water: ${entry.drankWater ? '✅' : '❌'}'),
-                    Text('Mood: ${'⭐' * entry.mood}'),
-                  ],
-                ),
+                _buildSmallTag(context, entry.followedMealPlan ? 'Meal Plan' : 'No Meal', entry.followedMealPlan),
+                const SizedBox(width: 8),
+                _buildSmallTag(context, entry.exerciseCompleted ? 'Exercise' : 'No Exercise', entry.exerciseCompleted),
               ],
             ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (entry.mealPlanNotes.isNotEmpty) ...[
+                      Text('Notes: ${entry.mealPlanNotes}'),
+                      const SizedBox(height: 12),
+                    ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Sleep: ${entry.sleepHours.toStringAsFixed(1)}h'),
+                        Text('Water: ${entry.drankWater ? '✅' : '❌'}'),
+                        Text('Mood: ${'⭐' * entry.mood}'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

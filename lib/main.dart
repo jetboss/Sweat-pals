@@ -15,9 +15,11 @@ import 'src/models/habit_check_in.dart';
 import 'src/models/morning_prompt.dart';
 import 'src/models/weekly_review.dart';
 import 'src/models/progress_photo.dart';
+import 'src/models/achievement.dart';
 import 'src/utils/constants.dart';
 
 import 'src/services/notifications_service.dart';
+import 'src/providers/achievements_provider.dart';
 
 void main() async {
   try {
@@ -40,8 +42,11 @@ void main() async {
     debugPrint('Hive boxes opened.');
     
     runApp(
-      const ProviderScope(
-        child: MyApp(),
+      ProviderScope(
+        overrides: [
+          achievementsBoxProvider.overrideWithValue(Hive.box<Achievement>('achievements')),
+        ],
+        child: const MyApp(),
       ),
     );
   } catch (e, stack) {
@@ -71,6 +76,8 @@ void _registerAdapters() {
   Hive.registerAdapter(MorningPromptAdapter());
   Hive.registerAdapter(WeeklyReviewAdapter());
   Hive.registerAdapter(ProgressPhotoAdapter());
+  Hive.registerAdapter(AchievementAdapter());
+  Hive.registerAdapter(AchievementCategoryAdapter());
 }
 
 Future<void> _openBoxes() async {
@@ -88,4 +95,5 @@ Future<void> _openBoxes() async {
   await Hive.openBox<WeeklyReview>(AppConstants.weeklyReviewBox);
   await Hive.openBox<ProgressPhoto>(AppConstants.progressPhotosBox);
   await Hive.openBox<Workout>('custom_workouts');
+  await Hive.openBox<Achievement>('achievements');
 }

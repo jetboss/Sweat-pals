@@ -100,7 +100,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               padding: const EdgeInsets.all(20.0),
               child: LinearProgressIndicator(
                 value: (_currentPage + 1) / 5,
-                backgroundColor: AppColors.pinkPastel,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 color: Colors.pink,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -128,14 +128,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: ElevatedButton(
                   onPressed: _nextPage,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.pink[100],
-                    foregroundColor: Colors.pink[700],
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 56),
+                    elevation: 4,
+                    shadowColor: AppColors.primary.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: Text(_currentPage == 3 ? 'Generate Plan' : 'Next Pal!'),
+                  child: Text(
+                    _currentPage == 3 ? 'Generate Plan 🚀' : 'Next Pal! →',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
           ],
@@ -153,14 +158,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Center(
-            child: Icon(Icons.rocket_launch_rounded, size: 64, color: Colors.pink),
+            child: Icon(Icons.rocket_launch_rounded, size: 80, color: AppColors.primary),
           ),
           const SizedBox(height: 20),
           Center(
             child: Text(
-              "You're all set, ${profile.name}!",
+              "You're all set, ${profile.name}! 🎉",
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.pink),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.primary),
             ),
           ),
           const SizedBox(height: 40),
@@ -178,7 +183,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.pinkPastel),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
             child: Text(
               planSummary,
@@ -189,14 +194,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ElevatedButton(
             onPressed: _finishOnboarding,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal[100],
-              foregroundColor: Colors.teal[800],
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 56),
+              elevation: 4,
+              shadowColor: AppColors.success.withValues(alpha: 0.4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const Text('Let\'s Crush it!'),
+            child: const Text(
+              "Let's Crush it! 💪",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -244,7 +254,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.pink[50]!.withValues(alpha: 0.5),
+            AppColors.primary.withValues(alpha: 0.1).withValues(alpha: 0.5),
             AppColors.scaffoldBackground,
           ],
         ),
@@ -269,7 +279,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               subtitle,
               style: TextStyle(
                 fontSize: 18,
-                color: Colors.pink[700]!.withValues(alpha: 0.7),
+                color: AppColors.primaryVariant.withValues(alpha: 0.7),
                 height: 1.4,
               ),
             ),
@@ -373,7 +383,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   InputDecoration _inputDecoration(String hint, IconData icon, {String? suffix}) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: Colors.pink[200]),
+      prefixIcon: Icon(icon, color: AppColors.primary.withValues(alpha: 0.4)),
       suffixText: suffix,
       filled: true,
       fillColor: Colors.white,

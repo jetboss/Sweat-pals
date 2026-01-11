@@ -11,6 +11,7 @@ import '../../utils/page_routes.dart';
 import 'workout_timer_screen.dart';
 import '../gamification/sweat_pal_avatar.dart';
 import '../../widgets/walk_workout_card.dart';
+import '../../widgets/sweat_pal_card.dart';
 
 import 'create_workout_screen.dart';
 
@@ -175,16 +176,19 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateWorkoutScreen()),
-          );
-        },
-        label: const Text('Create'),
-        icon: const Icon(Icons.add),
-        backgroundColor: AppColors.primary,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 90),
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CreateWorkoutScreen()),
+            );
+          },
+          label: const Text('Create'),
+          icon: const Icon(Icons.add),
+          backgroundColor: AppColors.primary,
+        ),
       ),
     );
   }
@@ -194,7 +198,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.pinkPastel, AppColors.tealAccent],
+          colors: [Color(0xFFFCE4EC), Color(0xFFE0F2F1)], // Hardcoded light gradient for stats
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -258,9 +262,9 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
             ),
             Row(
               children: [
-                Icon(Icons.timer_outlined, size: 14, color: Colors.pink[700]),
+                Icon(Icons.timer_outlined, size: 14, color: AppColors.primaryVariant),
                 const SizedBox(width: 4),
-                Text('${workout.durationMinutes} min', style: TextStyle(color: Colors.pink[700])),
+                Text('${workout.durationMinutes} min', style: TextStyle(color: AppColors.primaryVariant)),
               ],
             ),
           ],
@@ -274,121 +278,116 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
     final completionCount = progressNotifier.getCompletionCount(workout.id);
     final unlockProgress = progressNotifier.getUnlockProgress(workout);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      child: Opacity(
-        opacity: isUnlocked ? 1.0 : 0.6,
-        child: InkWell(
+    return Opacity(
+      opacity: isUnlocked ? 1.0 : 0.6,
+      child: Padding( // Add padding wrapper for spacing
+        padding: const EdgeInsets.only(bottom: 16),
+        child: SweatPalCard(
+          padding: const EdgeInsets.all(20),
           onTap: isUnlocked
               ? () {
                   HapticFeedback.lightImpact();
                   context.pushAnimated(WorkoutTimerScreen(workout: workout));
                 }
               : () => _showLockedDialog(context, workout, progressNotifier),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              if (!isUnlocked)
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 8),
-                                  child: Icon(Icons.lock_rounded, size: 18, color: Colors.grey),
-                                ),
-                              if (workout.isChallenge)
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 8),
-                                  child: Icon(Icons.emoji_events_rounded, size: 18, color: Colors.amber),
-                                ),
-                              Expanded(
-                                child: Text(
-                                  workout.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (!isUnlocked)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 8),
+                                child: Icon(Icons.lock_rounded, size: 18, color: Colors.grey),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            workout.description,
-                            style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isUnlocked)
-                      Column(
-                        children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              HapticFeedback.mediumImpact();
-                              context.pushAnimated(WorkoutTimerScreen(workout: workout));
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.pinkPastel,
-                              foregroundColor: Colors.pink[700],
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Text("Start"),
-                          ),
-                          if (completionCount > 0)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
+                            if (workout.isChallenge)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 8),
+                                child: Icon(Icons.emoji_events_rounded, size: 18, color: Colors.amber),
+                              ),
+                            Expanded(
                               child: Text(
-                                '${completionCount}x done',
-                                style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                                workout.title,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                               ),
                             ),
-                          if (workout.isCustom)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: IconButton(
-                                onPressed: () => _confirmDelete(context, workout),
-                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                                tooltip: 'Delete',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                style: const ButtonStyle(
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          workout.description,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.4),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isUnlocked)
+                    Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            context.pushAnimated(WorkoutTimerScreen(workout: workout));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                            foregroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                          ),
+                          child: const Text("Start"), // Consider Icon only for cleaner look
+                        ),
+                        if (completionCount > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              '${completionCount}x done',
+                              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
                             ),
-                        ],
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildChip(_getLevelColor(workout.level), workout.levelDisplayName),
-                    const SizedBox(width: 8),
-                    _buildChip(Colors.grey[200]!, workout.categoryDisplayName),
-                    const SizedBox(width: 8),
-                    _buildChip(Colors.grey[200]!, '${workout.totalDurationMinutes} min', icon: Icons.timer_outlined),
-                  ],
-                ),
-                if (!isUnlocked) ...[
-                  const SizedBox(height: 12),
-                  Row(
+                          ),
+                      ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildChip(_getLevelColor(workout.level), workout.levelDisplayName),
+                  const SizedBox(width: 8),
+                  _buildChip(Colors.grey[100]!, workout.categoryDisplayName),
+                  const SizedBox(width: 8),
+                  _buildChip(Colors.grey[100]!, '${workout.totalDurationMinutes} min', icon: Icons.timer_outlined),
+                  const Spacer(),
+                  if (workout.isCustom)
+                    IconButton(
+                      onPressed: () => _confirmDelete(context, workout),
+                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                      tooltip: 'Delete',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                ],
+              ),
+              if (!isUnlocked) ...[
+                const SizedBox(height: 16),
+                 Row(
                     children: [
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: unlockProgress,
-                            backgroundColor: Colors.grey[300],
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.pink[300]!),
+                            backgroundColor: Colors.grey[100],
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                             minHeight: 6,
                           ),
                         ),
@@ -400,14 +399,14 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
                       ),
                     ],
                   ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       ),
     );
   }
+
 
   Color _getLevelColor(WorkoutLevel level) {
     switch (level) {
@@ -470,7 +469,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
               child: LinearProgressIndicator(
                 value: progressNotifier.getUnlockProgress(workout),
                 backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.pink[300]!),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 minHeight: 8,
               ),
             ),

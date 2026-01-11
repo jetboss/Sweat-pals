@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../providers/walk_tracker_provider.dart';
+import '../../providers/workout_progress_provider.dart';
 import '../../services/walk_tracker_service.dart';
 import '../../theme/app_colors.dart';
 
@@ -19,7 +20,7 @@ class _TrackWalkScreenState extends ConsumerState<TrackWalkScreen> {
   final MapController _mapController = MapController();
   Timer? _durationTimer;
   Duration _elapsed = Duration.zero;
-  List<LatLng> _routePoints = [];
+  final List<LatLng> _routePoints = [];
 
   @override
   void initState() {
@@ -328,15 +329,21 @@ class _TrackWalkScreenState extends ConsumerState<TrackWalkScreen> {
     final session = ref.read(walkTrackerProvider.notifier).stopWalk();
     
     if (session != null) {
+      // Award XP and update streak
+      ref.read(workoutProgressProvider.notifier).completeWalk(
+        distanceKm: session.distanceKm,
+        duration: session.duration,
+      );
+      
       showModalBottomSheet(
         context: context,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        builder: (context) => _WalkSummarySheet(session: session),
+        builder: (ctx) => _WalkSummarySheet(session: session),
       ).then((_) {
         ref.read(walkTrackerProvider.notifier).reset();
-        Navigator.pop(context);
+        if (mounted) Navigator.pop(context);
       });
     }
   }

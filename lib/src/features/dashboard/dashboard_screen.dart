@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/motivational_quote_card.dart';
+import '../../widgets/sweat_pal_card.dart';
 import '../../utils/page_routes.dart';
 import '../tracking/tracking_provider.dart';
 import '../review/review_provider.dart';
@@ -16,10 +16,12 @@ import 'photos_provider.dart';
 import '../meals/meals_screen.dart';
 import '../workouts/workouts_screen.dart';
 import '../tracking/tracking_screen.dart';
-import '../journal/journal_screen.dart';
-import '../support/support_screen.dart';
 import '../review/review_screen.dart';
-import '../workouts/workout_calendar_screen.dart';
+import '../../widgets/smart_insights_card.dart';
+import '../gamification/achievements_screen.dart';
+import '../gamification/sweat_pal_avatar.dart';
+import '../../providers/avatar_provider.dart';
+import '../review/progress_timeline_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -120,8 +122,9 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             _buildWelcomeHeader(context, userName),
             const SizedBox(height: 24),
-            const MotivationalQuoteCard(),
+            const SmartInsightsCard(),
             const SizedBox(height: 24),
+            // const MotivationalQuoteCard(), // Optional: can keep or remove
             _buildStatGrid(context, streak, user),
             const SizedBox(height: 32),
             _buildSectionHeader(context, 'Weight Trend', onSeeAll: () {
@@ -130,7 +133,9 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _buildMiniChart(context, reviews),
             const SizedBox(height: 32),
-            _buildSectionHeader(context, 'Progress Photos', onSeeAll: () {}),
+            _buildSectionHeader(context, 'Progress Photos', onSeeAll: () {
+              context.pushAnimated(const ProgressTimelineScreen());
+            }),
             const SizedBox(height: 12),
             _buildPhotosList(context, ref, photos),
             const SizedBox(height: 32),
@@ -145,22 +150,80 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildWelcomeHeader(BuildContext context, String name) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hi $name!',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: Colors.pink[300],
-            fontWeight: FontWeight.bold,
+    return Consumer(
+      builder: (context, ref, _) {
+        final streak = ref.watch(trackingProvider.notifier).calculateStreak();
+        final avatarState = ref.watch(avatarProvider);
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppColors.brandGradient,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Ready to crush it today, pal?',
-          style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-        ),
-      ],
+          child: Row(
+            children: [
+              // Avatar
+              SweatPalAvatar(state: avatarState, size: 80),
+              const SizedBox(width: 16),
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hey $name! 👋',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ready to crush it today?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Streak Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.local_fire_department, color: Colors.orange, size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$streak Day Streak • Lv ${avatarState.level}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -314,45 +377,53 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildQuickLinksGrid(BuildContext context) {
+    // Reduced to 4 primary actions for cleaner hierarchy
     final links = [
+      _QuickLink(Icons.fitness_center_rounded, 'Workouts', AppColors.primary, const WorkoutsScreen()),
       _QuickLink(Icons.restaurant_rounded, 'Meals', Colors.orange, const MealsScreen()),
-      _QuickLink(Icons.fitness_center_rounded, 'Workouts', Colors.blue, const WorkoutsScreen()),
-      _QuickLink(Icons.calendar_month_rounded, 'Calendar', Colors.pink, const WorkoutCalendarScreen()),
-      _QuickLink(Icons.show_chart_rounded, 'Tracking', Colors.green, const TrackingScreen()),
-      _QuickLink(Icons.book_rounded, 'Journal', Colors.purple, const JournalScreen()),
-      _QuickLink(Icons.favorite_rounded, 'Support', Colors.red, const SupportScreen()),
-      _QuickLink(Icons.bar_chart_rounded, 'Review', Colors.teal, const ReviewScreen()),
+      _QuickLink(Icons.show_chart_rounded, 'Tracking', AppColors.success, const TrackingScreen()),
+      _QuickLink(Icons.emoji_events_rounded, 'Trophies', Colors.amber, const AchievementsScreen()),
     ];
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1,
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.3,
       ),
       itemCount: links.length,
       itemBuilder: (context, index) {
         final link = links[index];
-        return InkWell(
+        return SweatPalCard(
+          padding: EdgeInsets.zero,
           onTap: () => context.pushAnimated(link.screen),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: link.color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: link.color.withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(link.icon, color: link.color),
-                const SizedBox(height: 8),
-                Text(link.label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: link.color)),
-              ],
-            ),
+          color: link.color.withValues(alpha: 0.05),
+          border: Border.all(color: link.color.withValues(alpha: 0.1)),
+          // borderRadius: 20, // default is 24 which is fine
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: link.color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(link.icon, color: link.color, size: 24),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                link.label,
+                style: TextStyle(
+                  fontSize: 12, 
+                  fontWeight: FontWeight.bold, 
+                  color: link.color.withValues(alpha: 0.8)
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -370,22 +441,25 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SweatPalCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
-      ),
+      color: Colors.white,
       child: Row(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.7))),
-              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+              Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
             ],
           ),
         ],
@@ -451,7 +525,7 @@ class _PhotoOption extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.pink[50],
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: Colors.pink, size: 32),

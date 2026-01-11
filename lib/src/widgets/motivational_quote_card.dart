@@ -25,7 +25,7 @@ class _MotivationalQuoteCardState extends State<MotivationalQuoteCard> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.pink[50]!, Colors.pink[100]!],
+          colors: [AppColors.primary.withValues(alpha: 0.1), AppColors.primary.withValues(alpha: 0.2)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

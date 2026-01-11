@@ -20,6 +20,8 @@ class WorkoutCalendarScreen extends ConsumerStatefulWidget {
 
 class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
   late DateTime _weekStart;
+  late DateTime _currentMonth;
+  bool _isMonthView = false;
   
   @override
   void initState() {
@@ -27,6 +29,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
     // Start from Monday of current week
     final now = DateTime.now();
     _weekStart = now.subtract(Duration(days: now.weekday - 1));
+    _currentMonth = DateTime(now.year, now.month, 1);
   }
 
   void _previousWeek() {
@@ -41,10 +44,29 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
     });
   }
 
+  void _previousMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+    });
+  }
+
   void _goToThisWeek() {
     final now = DateTime.now();
     setState(() {
       _weekStart = now.subtract(Duration(days: now.weekday - 1));
+      _currentMonth = DateTime(now.year, now.month, 1);
+    });
+  }
+
+  void _toggleView() {
+    setState(() {
+      _isMonthView = !_isMonthView;
     });
   }
 
@@ -58,41 +80,223 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
       appBar: AppBar(
         title: const Text('Workout Calendar'),
         actions: [
+          // View toggle button - use distinct icons
           IconButton(
-            onPressed: _goToThisWeek,
-            icon: const Icon(Icons.today_rounded),
-            tooltip: 'Go to this week',
+            onPressed: _toggleView,
+            icon: Icon(_isMonthView ? Icons.view_agenda_rounded : Icons.grid_view_rounded),
+            tooltip: _isMonthView ? 'Week view' : 'Month view',
           ),
         ],
       ),
       body: Column(
         children: [
-          // Week Navigation
-          _buildWeekHeader(),
+          // Header (week or month)
+          _isMonthView ? _buildMonthHeader() : _buildWeekHeader(),
           
-          // Week Days
+          // Body (week or month)
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 7,
-              itemBuilder: (context, index) {
-                final day = DateTime(_weekStart.year, _weekStart.month, _weekStart.day + index);
-                final scheduled = weekSchedule[day] ?? [];
-                return _buildDayCard(context, day, scheduled);
-              },
-            ),
+            child: _isMonthView
+                ? _buildMonthGrid(calendarNotifier)
+                : ListView.builder(
+                    padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
+                    itemCount: 7,
+                    itemBuilder: (context, index) {
+                      final day = DateTime(_weekStart.year, _weekStart.month, _weekStart.day + index);
+                      final scheduled = weekSchedule[day] ?? [];
+                      return _buildDayCard(context, day, scheduled);
+                    },
+                  ),
           ),
           
           // Today's Quick Actions
           if (todaysWorkouts.isNotEmpty)
             _buildTodaysBanner(todaysWorkouts),
+          
+          // Extra space for FAB and nav bar
+          const SizedBox(height: 80),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showScheduleDialog(context),
-        backgroundColor: AppColors.pinkAccent,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Schedule'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 90),
+        child: FloatingActionButton.extended(
+          onPressed: () => _showScheduleDialog(context),
+          backgroundColor: AppColors.primary,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Schedule'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthHeader() {
+    final dateFormat = DateFormat('MMMM yyyy');
+    final now = DateTime.now();
+    final isCurrentMonth = _currentMonth.year == now.year && _currentMonth.month == now.month;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: _previousMonth,
+            icon: const Icon(Icons.chevron_left_rounded),
+          ),
+          Column(
+            children: [
+              Text(
+                dateFormat.format(_currentMonth),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              if (isCurrentMonth)
+                Text(
+                  'This Month',
+                  style: TextStyle(color: AppColors.primary, fontSize: 12),
+                ),
+            ],
+          ),
+          IconButton(
+            onPressed: _nextMonth,
+            icon: const Icon(Icons.chevron_right_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthGrid(WorkoutCalendarNotifier calendarNotifier) {
+    final firstDayOfMonth = _currentMonth;
+    final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    final daysInMonth = lastDayOfMonth.day;
+    
+    // Get the weekday of the first day (1 = Monday, 7 = Sunday in Dart)
+    final firstWeekday = firstDayOfMonth.weekday;
+    
+    // Calculate how many cells we need (leading empty + days in month)
+    final leadingEmptyDays = firstWeekday - 1; // Monday = 0 empty, Sunday = 6 empty
+    final totalCells = leadingEmptyDays + daysInMonth;
+    final rows = (totalCells / 7).ceil();
+
+    return Column(
+      children: [
+        // Day headers
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                .map((d) => Expanded(
+                      child: Center(
+                        child: Text(
+                          d,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
+        // Calendar grid
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 100),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              childAspectRatio: 1,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+            ),
+            itemCount: rows * 7,
+            itemBuilder: (context, index) {
+              final dayNumber = index - leadingEmptyDays + 1;
+              
+              if (dayNumber < 1 || dayNumber > daysInMonth) {
+                return const SizedBox.shrink();
+              }
+              
+              final date = DateTime(_currentMonth.year, _currentMonth.month, dayNumber);
+              return _buildMonthDayCell(date, calendarNotifier);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthDayCell(DateTime date, WorkoutCalendarNotifier calendarNotifier) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
+    final isPast = date.isBefore(today);
+    
+    // Get scheduled workouts for this date
+    final scheduled = calendarNotifier.getForDate(date);
+    final hasWorkout = scheduled.isNotEmpty;
+    final allCompleted = scheduled.isNotEmpty && scheduled.every((s) => s.isCompleted);
+    final hasMissed = scheduled.any((s) => s.isMissed);
+
+    return InkWell(
+      onTap: isPast ? null : () {
+        // Open schedule dialog with this date pre-selected
+        _showScheduleDialog(context, selectedDate: date);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isToday 
+              ? AppColors.primary.withValues(alpha: 0.15)
+              : hasWorkout 
+                  ? (allCompleted ? Colors.green[50] : hasMissed ? Colors.red[50] : AppColors.primary.withValues(alpha: 0.05))
+                  : null,
+          borderRadius: BorderRadius.circular(8),
+          border: isToday 
+              ? Border.all(color: AppColors.primary, width: 2)
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${date.day}',
+              style: TextStyle(
+                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                color: isPast && !isToday ? Colors.grey[400] : null,
+              ),
+            ),
+            if (hasWorkout)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    allCompleted 
+                        ? Icons.check_circle 
+                        : hasMissed 
+                            ? Icons.cancel 
+                            : Icons.fitness_center,
+                    size: 12,
+                    color: allCompleted 
+                        ? Colors.green 
+                        : hasMissed 
+                            ? Colors.red 
+                            : AppColors.primary,
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -130,7 +334,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
               if (isCurrentWeek)
                 Text(
                   'This Week',
-                  style: TextStyle(color: Colors.pink[400], fontSize: 12),
+                  style: TextStyle(color: AppColors.primary, fontSize: 12),
                 ),
             ],
           ),
@@ -160,10 +364,10 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: isToday ? Colors.pink[50] : null,
+      color: isToday ? AppColors.primary.withValues(alpha: 0.1) : null,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isToday ? BorderSide(color: Colors.pink[300]!, width: 2) : BorderSide.none,
+        side: isToday ? BorderSide(color: AppColors.primary, width: 2) : BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -180,14 +384,14 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: isToday ? Colors.pink[700] : null,
+                        color: isToday ? AppColors.primaryVariant : null,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       DateFormat('MMM d').format(day),
                       style: TextStyle(
-                        color: isToday ? Colors.pink[400] : Colors.grey[600],
+                        color: isToday ? AppColors.primary : Colors.grey[600],
                       ),
                     ),
                     if (isToday)
@@ -195,7 +399,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                         margin: const EdgeInsets.only(left: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.pink[400],
+                          color: AppColors.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Text(
@@ -267,7 +471,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                 ? Colors.green[600] 
                 : isMissed 
                     ? Colors.red[400] 
-                    : Colors.pink[400],
+                    : AppColors.primary,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -299,8 +503,8 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                 });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink[100],
-                foregroundColor: Colors.pink[700],
+                backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                foregroundColor: AppColors.primaryVariant,
                 minimumSize: const Size(60, 32),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
@@ -337,7 +541,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.pink[400]!, Colors.pink[300]!],
+          colors: [AppColors.primary, AppColors.primary],
         ),
       ),
       child: SafeArea(
@@ -362,7 +566,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
               },
               style: TextButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: Colors.pink[700],
+                foregroundColor: AppColors.primaryVariant,
               ),
               child: const Text('Let\'s Go!'),
             ),
@@ -456,18 +660,18 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                     final workout = unlockedWorkouts[index];
                     final isSelected = chosenWorkout?.id == workout.id;
                     return Card(
-                      color: isSelected ? Colors.pink[50] : null,
+                      color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : null,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: isSelected 
-                            ? BorderSide(color: Colors.pink[300]!, width: 2) 
+                            ? BorderSide(color: AppColors.primary, width: 2) 
                             : BorderSide.none,
                       ),
                       child: ListTile(
                         onTap: () => setModalState(() => chosenWorkout = workout),
                         leading: Icon(
                           isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                          color: isSelected ? Colors.pink[400] : Colors.grey[400],
+                          color: isSelected ? AppColors.primary : Colors.grey[400],
                         ),
                         title: Text(workout.title),
                         subtitle: Text('${workout.durationMinutes} min • ${workout.levelDisplayName}'),
@@ -499,8 +703,8 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                           );
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.pinkAccent,
-                    foregroundColor: Colors.pink[700],
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.primaryVariant,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: const Text('Schedule Workout'),

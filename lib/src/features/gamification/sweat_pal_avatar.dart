@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../providers/avatar_provider.dart';
 
 class SweatPalAvatar extends StatefulWidget {
@@ -16,9 +17,10 @@ class SweatPalAvatar extends StatefulWidget {
   State<SweatPalAvatar> createState() => _SweatPalAvatarState();
 }
 
-class _SweatPalAvatarState extends State<SweatPalAvatar>
-    with SingleTickerProviderStateMixin {
+class _SweatPalAvatarState extends State<SweatPalAvatar> with TickerProviderStateMixin {
   late AnimationController _controller;
+  late AnimationController _bounceController;
+  late Animation<double> _bounceAnimation;
 
   @override
   void initState() {
@@ -27,29 +29,124 @@ class _SweatPalAvatarState extends State<SweatPalAvatar>
       vsync: this,
       duration: const Duration(seconds: 5),
     )..repeat();
+    
+    _bounceController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 300),
+        lowerBound: 0.0,
+        upperBound: 0.35, // Increased bounce for more impact
+    );
+    _bounceAnimation = CurvedAnimation(parent: _bounceController, curve: Curves.elasticOut);
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.mediumImpact();
+    // Play bounce
+    _bounceController.forward().then((_) => _bounceController.reverse());
+    
+    // Show quick emoji overlay
+    _showEmojiReaction();
+  }
+  
+  void _showEmojiReaction() {
+    // Simple overlay of an emoji rising
+    final overlay = Overlay.of(context);
+    final renderBox = context.findRenderObject() as RenderBox;
+    final position = renderBox.localToGlobal(Offset.zero);
+    final size = renderBox.size;
+    
+    late OverlayEntry entry;
+    
+    // Choose emoji based on mood
+    String emoji = "🔥";
+    if (widget.state.mood == AvatarMood.happy) emoji = "❤️";
+    if (widget.state.mood == AvatarMood.tired) emoji = "💤";
+    
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: position.dx + size.width / 2 - 20,
+        top: position.dy,
+        child: _FloatingEmoji(emoji: emoji, onEnd: () => entry.remove()),
+      ),
+    );
+    
+    overlay.insert(entry);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_controller, _bounceController]),
+        builder: (context, child) {
+          final scale = 1.0 + (0.5 * _bounceAnimation.value); // Scale factor
+          return Transform.scale(
+            scale: scale,
+            child: CustomPaint(
+              size: Size(widget.size, widget.size),
+              painter: PerformancePulsePainter(
+                color: widget.state.primaryColor,
+                mood: widget.state.mood,
+                level: widget.state.level,
+                animationValue: _controller.value,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FloatingEmoji extends StatefulWidget {
+  final String emoji;
+  final VoidCallback onEnd;
+  const _FloatingEmoji({required this.emoji, required this.onEnd});
+
+  @override
+  State<_FloatingEmoji> createState() => _FloatingEmojiState();
+}
+
+class _FloatingEmojiState extends State<_FloatingEmoji> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _float;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 1));
+    _float = Tween<double>(begin: 0, end: -100).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _fade = Tween<double>(begin: 1, end: 0).animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.5, 1.0)));
+    
+    _ctrl.forward().then((_) => widget.onEnd());
+  }
+  
+  @override
+  void dispose() {
+    _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
-          size: Size(widget.size, widget.size),
-          painter: PerformancePulsePainter(
-            color: widget.state.primaryColor,
-            mood: widget.state.mood,
-            level: widget.state.level,
-            animationValue: _controller.value,
-          ),
-        );
-      },
+      animation: _ctrl,
+      builder: (ctx, child) => Transform.translate(
+        offset: Offset(0, _float.value),
+        child: Opacity(
+          opacity: _fade.value,
+          child: Text(widget.emoji, style: const TextStyle(fontSize: 40, decoration: TextDecoration.none)),
+        ),
+      ),
     );
   }
 }
@@ -113,7 +210,7 @@ class PerformancePulsePainter extends CustomPainter {
 
   void _drawHeartRateWave(Canvas canvas, Offset center, double size) {
     final pulsePaint = Paint()
-      ..color = color.withOpacity(0.3)
+      ..color = color.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
@@ -149,7 +246,7 @@ class PerformancePulsePainter extends CustomPainter {
     
     // Core Glow
     final glowPaint = Paint()
-      ..color = color.withOpacity(0.2)
+      ..color = color.withValues(alpha: 0.2)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
     canvas.drawCircle(center, currentRadius * 1.5, glowPaint);
 
@@ -177,7 +274,7 @@ class PerformancePulsePainter extends CustomPainter {
       // Face Color Variation (simulate light refraction)
       final shadeValue = (sin(angle + animationValue * pi) + 1) / 2;
       paint.color = Color.lerp(color, Colors.white, 0.1 + (0.4 * shadeValue))!
-          .withOpacity(0.9);
+          .withValues(alpha: 0.9);
       
       final pPath = Path()
         ..moveTo(center.dx, center.dy)
@@ -189,7 +286,7 @@ class PerformancePulsePainter extends CustomPainter {
       
       // Facet Lines
       final linePaint = Paint()
-        ..color = Colors.white.withOpacity(0.2)
+        ..color = Colors.white.withValues(alpha: 0.2)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0;
       canvas.drawPath(pPath, linePaint);

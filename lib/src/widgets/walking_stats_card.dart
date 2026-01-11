@@ -247,7 +247,7 @@ class _PromptConnectState extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.directions_walk, color: AppColors.primary, size: 32),
+          child: const Icon(Icons.directions_walk, color: AppColors.primary, size: 32),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -380,114 +380,6 @@ class _DataState extends StatelessWidget {
   String _formatSteps(int steps) {
     if (steps >= 1000) {
       return '${(steps / 1000).toStringAsFixed(1)}K';
-    }
-    return steps.toString();
-  }
-}
-
-class _WeeklyChartSheet extends ConsumerWidget {
-  const _WeeklyChartSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final weeklyData = ref.watch(weeklyStepsProvider);
-    final stepGoal = ref.watch(stepGoalProvider);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.directions_walk, color: AppColors.primary),
-              const SizedBox(width: 8),
-              const Text(
-                'Weekly Steps',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () => ref.refresh(weeklyStepsProvider),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          weeklyData.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (data) => _WeeklyBarChart(data: data, goal: stepGoal),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-}
-
-class _WeeklyBarChart extends StatelessWidget {
-  final List<dynamic> data;
-  final int goal;
-
-  const _WeeklyBarChart({required this.data, required this.goal});
-
-  @override
-  Widget build(BuildContext context) {
-    if (data.isEmpty) {
-      return const Center(child: Text('No data available'));
-    }
-
-    final maxSteps = data.fold<int>(goal, (max, d) => d.steps > max ? d.steps : max);
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-    return SizedBox(
-      height: 150,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(data.length, (index) {
-          final d = data[index];
-          final double heightPercent = maxSteps > 0 ? (d.steps.toDouble() / maxSteps.toDouble()) : 0.0;
-          final isGoalReached = d.steps >= goal;
-          final dayIndex = d.date.weekday - 1;
-
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                _formatStepsShort(d.steps),
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isGoalReached ? Colors.green : Colors.grey[600],
-                  fontWeight: isGoalReached ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: 30,
-                height: 100 * heightPercent,
-                decoration: BoxDecoration(
-                  color: isGoalReached ? Colors.green : AppColors.primary.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                days[dayIndex],
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
-            ],
-          );
-        }),
-      ),
-    );
-  }
-
-  String _formatStepsShort(int steps) {
-    if (steps >= 1000) {
-      return '${(steps / 1000).toStringAsFixed(0)}K';
     }
     return steps.toString();
   }

@@ -131,6 +131,53 @@ class WorkoutProgressNotifier extends StateNotifier<WorkoutProgress> {
     return newlyUnlocked;
   }
 
+  /// Record a walk completion (counts toward streak like workouts)
+  Future<void> completeWalk({
+    required double distanceKm,
+    required Duration duration,
+  }) async {
+    // Update streak (same logic as workouts)
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    int newStreak = state.currentStreak;
+    
+    if (state.lastWorkoutDate != null) {
+      final lastDate = DateTime(
+        state.lastWorkoutDate!.year,
+        state.lastWorkoutDate!.month,
+        state.lastWorkoutDate!.day,
+      );
+      final difference = today.difference(lastDate).inDays;
+      
+      if (difference == 0) {
+        // Same day, no streak change
+      } else if (difference == 1) {
+        // Consecutive day, increase streak
+        newStreak += 1;
+      } else {
+        // Missed days, reset streak
+        newStreak = 1;
+      }
+    } else {
+      newStreak = 1;
+    }
+
+    // Track walk completions with special ID "WALK"
+    final newCompletionCounts = Map<String, int>.from(state.completionCounts);
+    newCompletionCounts['WALK'] = (newCompletionCounts['WALK'] ?? 0) + 1;
+
+    state = WorkoutProgress(
+      completionCounts: newCompletionCounts,
+      unlockedWorkoutIds: state.unlockedWorkoutIds,
+      lastWorkoutDate: now,
+      currentStreak: newStreak,
+      longestStreak: newStreak > state.longestStreak ? newStreak : state.longestStreak,
+      totalWorkoutsCompleted: state.totalWorkoutsCompleted + 1,
+    );
+
+    await _saveProgress();
+  }
+
   /// Check if a workout is unlocked
   bool isUnlocked(String workoutId) {
     return state.isUnlocked(workoutId);

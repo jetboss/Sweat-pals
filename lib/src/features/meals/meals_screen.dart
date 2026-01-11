@@ -80,9 +80,9 @@ class _MealsScreenState extends ConsumerState<MealsScreen> with SingleTickerProv
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.pinkPastel.withAlpha(50),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.pinkPastel),
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -153,7 +153,7 @@ class _MealsScreenState extends ConsumerState<MealsScreen> with SingleTickerProv
       default: icon = Icons.cookie_rounded;
     }
     return CircleAvatar(
-      backgroundColor: AppColors.pinkPastel,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
       child: Icon(icon, color: Colors.pink, size: 20),
     );
   }
@@ -162,9 +162,9 @@ class _MealsScreenState extends ConsumerState<MealsScreen> with SingleTickerProv
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.teal[50],
+        color: AppColors.success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.teal[100]!),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
       ),
       child: const Row(
         children: [
@@ -196,7 +196,7 @@ class _MealsScreenState extends ConsumerState<MealsScreen> with SingleTickerProv
               child: ListView.builder(
                 itemCount: list.length,
                 itemBuilder: (ctx, i) => ListTile(
-                  leading: const Icon(Icons.check_box_outline_blank, color: AppColors.pinkAccent),
+                  leading: const Icon(Icons.check_box_outline_blank, color: AppColors.primary),
                   title: Text(list[i]),
                 ),
               ),

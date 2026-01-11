@@ -43,7 +43,7 @@ class WalkWorkoutCard extends ConsumerWidget {
                       color: AppColors.primary.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.directions_walk,
                       color: AppColors.primary,
                       size: 24,
@@ -99,7 +99,7 @@ class WalkWorkoutCard extends ConsumerWidget {
                   },
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber, color: Colors.orange, size: 16),
+                      const Icon(Icons.warning_amber, color: Colors.orange, size: 16),
                       const SizedBox(width: 8),
                       const Text(
                         'Tap to enable step counting',
@@ -151,7 +151,6 @@ class _StepBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (steps / goal).clamp(0.0, 1.0);
     final isComplete = steps >= goal;
 
     return Container(

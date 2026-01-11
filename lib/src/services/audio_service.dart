@@ -1,4 +1,5 @@
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/foundation.dart';
 import 'package:audio_session/audio_session.dart';
 
 class WorkoutAudioService {
@@ -56,7 +57,7 @@ class WorkoutAudioService {
         await _flutterTts.setVoice({"name": preferredVoice['name'], "locale": preferredVoice['locale']});
       }
     } catch (e) {
-      print("Error setting voice: $e");
+      debugPrint("Error setting voice: $e");
     }
 
     // Keep flutter_tts's own category setting as backup/sync

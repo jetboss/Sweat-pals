@@ -17,7 +17,7 @@ class _CreateWorkoutScreenState extends ConsumerState<CreateWorkoutScreen> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
   
-  List<Exercise> _exercises = [];
+  final List<Exercise> _exercises = [];
 
   void _addExercise() {
     showDialog(
@@ -67,9 +67,9 @@ class _CreateWorkoutScreenState extends ConsumerState<CreateWorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.scaffoldBackground,
         title: const Text('Create Workout', style: TextStyle(color: Colors.white)),
         actions: [
           TextButton(
@@ -121,13 +121,13 @@ class _CreateWorkoutScreenState extends ConsumerState<CreateWorkoutScreen> {
                     for (int i = 0; i < _exercises.length; i++)
                       ListTile(
                         key: ValueKey(_exercises[i]),
-                        tileColor: AppColors.cardSurface,
+                        tileColor: AppColors.cardBackground,
                         title: Text(_exercises[i].name, style: const TextStyle(color: Colors.white)),
                         subtitle: Text(
                           _exercises[i].durationSeconds > 0 
                               ? '${_exercises[i].durationSeconds}s' 
                               : '${_exercises[i].reps} reps',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                         ),
                         leading: const Icon(Icons.drag_handle, color: Colors.grey),
                         trailing: IconButton(
@@ -183,7 +183,7 @@ class _AddExerciseDialogState extends State<_AddExerciseDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.cardSurface,
+      backgroundColor: AppColors.cardBackground,
       title: const Text('Add Exercise', style: TextStyle(color: Colors.white)),
       content: SingleChildScrollView(
         child: Column(

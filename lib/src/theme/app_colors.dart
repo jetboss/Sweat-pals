@@ -1,37 +1,42 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // ===== LIGHT THEME =====
-  // Primary Palette
-  static const Color pinkPastel = Color(0xFFFCE4EC); // Colors.pink[50]
-  static const Color pinkAccent = Color(0xFFF8BBD0); // Colors.pink[100]
-  static const Color primary = pinkAccent; // Main brand color
-  
-  // Accents for Motivation
-  static const Color tealAccent = Color(0xFFB2DFDB); // Colors.teal[100]
-  static const Color greenAccent = Color(0xFFC8E6C9); // Colors.green[100]
-  
-  // Neutral / Background
-  static const Color scaffoldBackground = Color(0xFFFAFAFA);
-  static const Color background = scaffoldBackground;
-  static const Color cardBackground = Colors.white;
-  static const Color cardSurface = Colors.white;
-  
-  // Text
-  static const Color textPrimary = Color(0xFF424242);
-  static const Color textSecondary = Color(0xFF757575);
+  // ===== BRAND IDENTITY =====
+  // High-Energy Primary: A vivid, mature pink/red. No more soft baby pinks.
+  static const Color primary = Color(0xFFFF1744); // Deep Accent Pink/Red
+  static const Color primaryVariant = Color(0xFFD50000); 
 
-  // ===== DARK THEME =====
-  static const Color darkScaffoldBackground = Color(0xFF121212);
-  static const Color darkCardBackground = Color(0xFF1E1E1E);
-  static const Color darkSurface = Color(0xFF2C2C2C);
+  // Secondary/Accent: Electric Blue/Purple for high contrast elements
+  static const Color accent = Color(0xFF651FFF); // Deep Purple Accent
+
+  // ===== NEUTRALS (Light) =====
+  static const Color scaffoldBackground = Color(0xFFF5F5F7); // Apple-style light gray
+  static const Color cardBackground = Colors.white;
+  static const Color textPrimary = Color(0xFF1D1D1F); // Almost black
+  static const Color textSecondary = Color(0xFF86868B); // Mid gray
+  static const Color divider = Color(0xFFE5E5EA);
+
+  // ===== NEUTRALS (Dark) =====
+  static const Color darkScaffoldBackground = Color(0xFF000000); // True black for OLED
+  static const Color darkCardBackground = Color(0xFF1C1C1E); // Apple-style dark gray
+  static const Color darkTextPrimary = Color(0xFFF5F5F7);
+  static const Color darkTextSecondary = Color(0xFF86868B);
+
+  // ===== FUNCTIONAL =====
+  static const Color success = Color(0xFF34C759);
+  static const Color warning = Color(0xFFFF9F0A);
+  static const Color error = Color(0xFFFF3B30);
   
-  // Text (Dark)
-  static const Color darkTextPrimary = Color(0xFFE0E0E0);
-  static const Color darkTextSecondary = Color(0xFFB0B0B0);
+  // Gradients
+  static const LinearGradient brandGradient = LinearGradient(
+    colors: [Color(0xFFFF1744), Color(0xFFFF4081)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
   
-  // Accent colors remain vibrant in dark mode
-  static const Color darkPinkAccent = Color(0xFFFF80AB); // Brighter pink
-  static const Color darkTealAccent = Color(0xFF80CBC4);
-  static const Color darkGreenAccent = Color(0xFFA5D6A7);
+  static const LinearGradient darkBrandGradient = LinearGradient(
+    colors: [Color(0xFFD50000), Color(0xFFC51162)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }

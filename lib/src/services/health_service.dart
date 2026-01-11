@@ -14,11 +14,6 @@ class HealthService {
     HealthDataType.ACTIVE_ENERGY_BURNED,
   ];
 
-  static final List<HealthDataType> _writeTypes = [
-    HealthDataType.STEPS,
-    HealthDataType.DISTANCE_DELTA,
-  ];
-
   /// Configure the health plugin (call once at startup)
   static Future<void> configure() async {
     if (_isConfigured) return;

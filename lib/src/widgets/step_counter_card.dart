@@ -55,7 +55,7 @@ class StepCounterCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.directions_walk, color: AppColors.primary),
+                const Icon(Icons.directions_walk, color: AppColors.primary),
                 const SizedBox(width: 8),
                 const Text(
                   'Step Counter',
