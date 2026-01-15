@@ -1,0 +1,142 @@
+Analyzing lib...                                                
+
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:56:7 • prefer_const_constructors
+warning • Duplicate import • lib/src/app.dart:8:8 • duplicate_import
+warning • Unused import: 'package:supabase_flutter/supabase_flutter.dart' • lib/src/features/auth/login_screen.dart:3:8 • unused_import
+   info • Use 'const' with the constructor to improve performance • lib/src/features/journal/journal_screen.dart:33:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/journal/journal_screen.dart:36:31 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/journal/journal_screen.dart:113:26 • prefer_const_constructors
+  error • The named parameter 'affirmation' is required, but there's no corresponding argument • lib/src/features/onboarding/onboarding_screen.dart:86:26 • missing_required_argument
+  error • The named parameter 'dailyAction' is required, but there's no corresponding argument • lib/src/features/onboarding/onboarding_screen.dart:86:26 • missing_required_argument
+  error • The named parameter 'goalReminder' is required, but there's no corresponding argument • lib/src/features/onboarding/onboarding_screen.dart:86:26 • missing_required_argument
+  error • The named parameter 'intention' isn't defined • lib/src/features/onboarding/onboarding_screen.dart:89:14 • undefined_named_parameter
+  error • The named parameter 'mood' isn't defined • lib/src/features/onboarding/onboarding_screen.dart:91:14 • undefined_named_parameter
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/onboarding/onboarding_screen.dart:121:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/onboarding/onboarding_screen.dart:135:28 • use_build_context_synchronously
+warning • The value of the local variable 'avatars' isn't used • lib/src/features/onboarding/onboarding_screen.dart:226:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/onboarding/onboarding_screen.dart:271:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/pacts/pacts_screen.dart:125:34 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:168:12 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:169:14 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/src/features/pacts/pacts_screen.dart:171:19 • prefer_const_literals_to_create_immutables
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:172:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:174:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:176:20 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:179:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:181:20 • prefer_const_constructors
+warning • The value of the local variable 'target' isn't used • lib/src/features/pacts/pacts_screen.dart:192:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/pacts/pacts_screen.dart:219:32 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:231:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:233:52 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:239:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/pacts/pacts_screen.dart:241:85 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/pacts/pacts_screen.dart:250:46 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/pacts/pacts_screen.dart:343:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/pacts/pacts_screen.dart:345:46 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/pacts/pacts_screen.dart:354:47 • use_build_context_synchronously
+warning • Unused import: '../../models/user_profile.dart' • lib/src/features/partnership/find_partner_screen.dart:5:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/partnership/find_partner_screen.dart:198:42 • deprecated_member_use
+warning • Unused import: 'dart:io' • lib/src/features/profile/profile_screen.dart:1:8 • unused_import
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/src/features/profile/profile_screen.dart:401:38 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/profile/profile_screen.dart:436:55 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/profile/profile_screen.dart:585:28 • use_build_context_synchronously
+warning • The value of the local variable 'squadId' isn't used • lib/src/features/squads/create_squad_screen.dart:23:13 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/squads/create_squad_screen.dart:133:37 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/create_squad_screen.dart:157:28 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:59:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:66:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:69:22 • prefer_const_constructors
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/squads/squad_screen.dart:138:34 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/squads/squad_screen.dart:140:43 • use_build_context_synchronously
+warning • The value of the local variable 'totalMembers' isn't used • lib/src/features/squads/squad_screen.dart:335:19 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/squads/squad_screen.dart:352:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/squads/squad_screen.dart:354:69 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:356:30 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/src/features/squads/squad_screen.dart:357:35 • prefer_const_literals_to_create_immutables
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:358:27 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:360:27 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:361:36 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:363:38 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:366:27 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:386:23 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:393:34 • prefer_const_constructors
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/squads/squad_screen.dart:450:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/src/features/squads/squad_screen.dart:457:40 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/squads/squad_screen.dart:474:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/squads/squad_screen.dart:514:55 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:539:27 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/squads/squad_screen.dart:543:36 • prefer_const_constructors
+warning • Unused import: 'package:intl/intl.dart' • lib/src/features/today/today_screen.dart:4:8 • unused_import
+warning • Unused import: '../../providers/workout_calendar_provider.dart' • lib/src/features/today/today_screen.dart:6:8 • unused_import
+warning • Unused import: '../../utils/page_routes.dart' • lib/src/features/today/today_screen.dart:8:8 • unused_import
+warning • Unused import: '../workouts/workout_timer_screen.dart' • lib/src/features/today/today_screen.dart:11:8 • unused_import
+warning • Unused import: '../journal/journal_provider.dart' • lib/src/features/today/today_screen.dart:12:8 • unused_import
+warning • Unused import: '../journal/journal_screen.dart' • lib/src/features/today/today_screen.dart:14:8 • unused_import
+warning • Unused import: '../../widgets/animated_streak_counter.dart' • lib/src/features/today/today_screen.dart:23:8 • unused_import
+   info • Use 'const' with the constructor to improve performance • lib/src/features/today/today_screen.dart:97:45 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/today/today_screen.dart:103:21 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/src/features/today/today_screen.dart:104:21 • prefer_const_literals_to_create_immutables
+  error • The argument type 'WidgetRef' can't be assigned to the parameter type 'Ref<Object?>'.  • lib/src/features/today/today_screen.dart:159:75 • argument_type_not_assignable
+   info • Use 'const' with the constructor to improve performance • lib/src/features/today/today_screen.dart:194:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/today/today_screen.dart:228:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/today/today_screen.dart:230:28 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/today/today_screen.dart:256:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/today/today_screen.dart:263:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/today/today_screen.dart:544:40 • deprecated_member_use
+warning • The value of the local variable 'notificationsAsync' isn't used • lib/src/features/today/today_screen.dart:571:11 • unused_local_variable
+warning • The declaration '_QuickStatCard' isn't referenced • lib/src/features/today/today_screen.dart:701:7 • unused_element
+warning • A value for optional parameter 'color' isn't ever given • lib/src/features/today/today_screen.dart:711:10 • unused_element_parameter
+   info • Use 'const' with the constructor to improve performance • lib/src/features/today/today_screen.dart:725:32 • prefer_const_constructors
+  error • Undefined name 'userProvider' • lib/src/features/tracking/tracking_provider.dart:68:27 • undefined_identifier
+  error • The method 'UserProfile' isn't defined for the type 'TrackingNotifier' • lib/src/features/tracking/tracking_provider.dart:91:28 • undefined_method
+  error • Undefined name 'userProvider' • lib/src/features/tracking/tracking_provider.dart:105:20 • undefined_identifier
+warning • The declaration '_goToThisWeek' isn't referenced • lib/src/features/workouts/workout_calendar_screen.dart:60:8 • unused_element
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:162:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:164:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:216:27 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:335:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:337:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:370:25 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:542:19 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:543:19 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/src/features/workouts/workout_calendar_screen.dart:544:19 • prefer_const_literals_to_create_immutables
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workout_calendar_screen.dart:667:31 • prefer_const_constructors
+warning • Unused import: 'dart:math' • lib/src/features/workouts/workout_timer_screen.dart:2:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/workouts/workout_timer_screen.dart:401:53 • deprecated_member_use
+warning • Duplicate import • lib/src/features/workouts/workouts_screen.dart:8:8 • duplicate_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/workouts/workouts_screen.dart:199:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/workouts/workouts_screen.dart:199:76 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/features/workouts/workouts_screen.dart:206:40 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workouts_screen.dart:224:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workouts_screen.dart:226:63 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workouts_screen.dart:349:41 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/features/workouts/workouts_screen.dart:431:29 • prefer_const_constructors
+warning • Unnecessary cast • lib/src/providers/health_provider.dart:71:16 • unnecessary_cast
+warning • Unnecessary cast • lib/src/providers/health_provider.dart:72:19 • unnecessary_cast
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:25:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:63:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:81:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:129:7 • avoid_print
+   info • Use 'rethrow' to rethrow a caught exception • lib/src/services/database_service.dart:130:7 • use_rethrow_when_possible
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:157:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:228:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:230:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:257:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:276:7 • avoid_print
+warning • Unnecessary cast • lib/src/services/database_service.dart:305:29 • unnecessary_cast
+   info • Don't invoke 'print' in production code • lib/src/services/database_service.dart:368:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/sync_queue_service.dart:48:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/sync_queue_service.dart:51:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/sync_queue_service.dart:58:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/sync_queue_service.dart:67:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/sync_queue_service.dart:99:15 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/sync_queue_service.dart:106:13 • avoid_print
+   info • Don't invoke 'print' in production code • lib/src/services/sync_queue_service.dart:109:11 • avoid_print
+   info • Use 'const' with the constructor to improve performance • lib/src/theme/app_theme.dart:159:23 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/src/theme/app_theme.dart:163:23 • prefer_const_constructors
+warning • Duplicate import • lib/src/widgets/animated_streak_counter.dart:3:8 • duplicate_import
+warning • The value of the field '_previousStreak' isn't used • lib/src/widgets/animated_streak_counter.dart:26:7 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/widgets/animated_streak_counter.dart:150:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/widgets/animated_streak_counter.dart:168:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/widgets/animated_widgets.dart:218:38 • deprecated_member_use
+

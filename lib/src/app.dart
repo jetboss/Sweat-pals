@@ -5,11 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/user_provider.dart';
 import 'providers/theme_provider.dart';
 import 'features/onboarding/onboarding_screen.dart';
-import 'features/meals/meals_screen.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'features/workouts/workouts_screen.dart';
 import 'features/tracking/tracking_screen.dart';
 import 'features/today/today_screen.dart';
 import 'features/workouts/workout_calendar_screen.dart';
+import 'features/profile/profile_screen.dart';
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -59,8 +60,8 @@ class _MainShellState extends State<MainShell> {
     const TodayScreen(),
     const WorkoutCalendarScreen(),
     const WorkoutsScreen(),
-    const MealsScreen(),
     const TrackingScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -69,7 +70,7 @@ class _MainShellState extends State<MainShell> {
       extendBody: true, // Crucial for content behind nav bar
       body: _screens[_selectedIndex],
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
+        margin: const EdgeInsets.only(left: 32, right: 32, bottom: 24),
         decoration: BoxDecoration(
           color: Theme.of(context).bottomNavigationBarTheme.backgroundColor?.withValues(alpha: 0.8) ?? Colors.white.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(32),
@@ -94,46 +95,34 @@ class _MainShellState extends State<MainShell> {
                 splashColor: Colors.transparent,
                 highlightColor: Colors.transparent,
               ),
-              child: BottomNavigationBar(
-                currentIndex: _selectedIndex,
-                onTap: (index) => setState(() => _selectedIndex = index),
-                backgroundColor: Colors.transparent, // Important
-                elevation: 0, // Remove shadow
-                type: BottomNavigationBarType.fixed,
-                selectedItemColor: Theme.of(context).colorScheme.primary,
-                unselectedItemColor: Colors.grey,
-                showSelectedLabels: false, // Cleaner look
-                showUnselectedLabels: false,
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.wb_sunny_outlined), 
-                    activeIcon: Icon(Icons.wb_sunny_rounded),
-                    label: 'Today'
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.calendar_month_outlined), 
-                    activeIcon: Icon(Icons.calendar_month_rounded),
-                    label: 'Calendar'
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.fitness_center_outlined), 
-                    activeIcon: Icon(Icons.fitness_center_rounded),
-                    label: 'Workouts'
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.restaurant_outlined), 
-                    activeIcon: Icon(Icons.restaurant_rounded),
-                    label: 'Meals'
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.show_chart_rounded), 
-                    activeIcon: Icon(Icons.insights_rounded),
-                    label: 'Tracking'
-                  ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildNavItem(0, Icons.wb_sunny_outlined, Icons.wb_sunny_rounded),
+                  _buildNavItem(1, Icons.calendar_month_outlined, Icons.calendar_month_rounded),
+                  _buildNavItem(2, Icons.fitness_center_outlined, Icons.fitness_center_rounded),
+                  _buildNavItem(3, Icons.show_chart_rounded, Icons.insights_rounded),
+                  _buildNavItem(4, Icons.person_outline, Icons.person_rounded),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Icon(
+          isSelected ? activeIcon : icon,
+          size: 24,
+          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
         ),
       ),
     );

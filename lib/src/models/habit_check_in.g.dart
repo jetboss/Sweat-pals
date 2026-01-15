@@ -25,13 +25,14 @@ class HabitCheckInAdapter extends TypeAdapter<HabitCheckIn> {
       drankWater: fields[5] as bool,
       mood: fields[6] as int,
       exerciseCompleted: fields[7] as bool,
+      isFrozen: fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, HabitCheckIn obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class HabitCheckInAdapter extends TypeAdapter<HabitCheckIn> {
       ..writeByte(6)
       ..write(obj.mood)
       ..writeByte(7)
-      ..write(obj.exerciseCompleted);
+      ..write(obj.exerciseCompleted)
+      ..writeByte(8)
+      ..write(obj.isFrozen);
   }
 
   @override

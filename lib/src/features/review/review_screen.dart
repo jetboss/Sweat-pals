@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'review_provider.dart';
 import 'weekly_review_form.dart';
 import '../../utils/page_routes.dart';
+import '../../widgets/animated_widgets.dart';
+import '../../theme/app_colors.dart';
 
 class ReviewScreen extends ConsumerWidget {
   const ReviewScreen({super.key});
@@ -20,7 +22,7 @@ class ReviewScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.bar_chart_rounded, size: 64, color: Colors.grey),
+                  const Icon(Icons.bar_chart_rounded, size: 64, color: AppColors.textSecondary),
                   const SizedBox(height: 16),
                   const Text('No reviews yet. Time for your first one, pal?'),
                   const SizedBox(height: 24),
@@ -45,7 +47,7 @@ class ReviewScreen extends ConsumerWidget {
               ),
             ),
       floatingActionButton: reviews.isNotEmpty
-          ? FloatingActionButton(
+          ? GlowingFAB(
               onPressed: () => context.pushAnimated(const WeeklyReviewForm()),
               child: const Icon(Icons.add_rounded),
             )

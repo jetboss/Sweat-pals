@@ -9,6 +9,7 @@ import '../../providers/workout_calendar_provider.dart';
 import '../../providers/workout_progress_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/page_routes.dart';
+import '../../widgets/animated_widgets.dart';
 import 'workout_timer_screen.dart';
 
 class WorkoutCalendarScreen extends ConsumerStatefulWidget {
@@ -117,12 +118,11 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
         ],
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 90),
-        child: FloatingActionButton.extended(
+        padding: const EdgeInsets.only(bottom: 100),
+        child: GlowingFAB(
           onPressed: () => _showScheduleDialog(context),
-          backgroundColor: AppColors.primary,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Schedule'),
+          label: 'Schedule',
+          child: const Icon(Icons.add_rounded),
         ),
       ),
     );

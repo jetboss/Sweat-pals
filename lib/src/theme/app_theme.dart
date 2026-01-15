@@ -117,8 +117,8 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: AppColors.divider.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide.none,
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -142,13 +142,13 @@ class AppTheme {
           textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-          ),
+          ).copyWith(inherit: false),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -215,8 +215,8 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide.none,
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -240,14 +240,15 @@ class AppTheme {
           textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-          ),
+          ).copyWith(inherit: false),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        // Glow effect handled in widget with BoxShadow
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

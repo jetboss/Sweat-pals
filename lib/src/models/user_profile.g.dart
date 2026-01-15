@@ -25,13 +25,18 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       sex: fields[5] as String,
       foodsToAvoid: fields[6] as String,
       startDate: fields[7] as DateTime,
+      preferredWorkoutHour: fields[8] as int?,
+      fitnessLevel: fields[9] as String?,
+      bio: fields[10] as String?,
+      restTokens: fields[11] as int?,
+      sweatCoins: fields[12] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserProfile obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -47,7 +52,17 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(6)
       ..write(obj.foodsToAvoid)
       ..writeByte(7)
-      ..write(obj.startDate);
+      ..write(obj.startDate)
+      ..writeByte(8)
+      ..write(obj.preferredWorkoutHour)
+      ..writeByte(9)
+      ..write(obj.fitnessLevel)
+      ..writeByte(10)
+      ..write(obj.bio)
+      ..writeByte(11)
+      ..write(obj.restTokens)
+      ..writeByte(12)
+      ..write(obj.sweatCoins);
   }
 
   @override

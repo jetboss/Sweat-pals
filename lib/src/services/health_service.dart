@@ -12,6 +12,7 @@ class HealthService {
     HealthDataType.STEPS,
     HealthDataType.DISTANCE_DELTA,
     HealthDataType.ACTIVE_ENERGY_BURNED,
+    HealthDataType.WORKOUT,
   ];
 
   /// Configure the health plugin (call once at startup)
@@ -175,5 +176,49 @@ class HealthService {
       steps: steps,
       distanceMeters: distance,
     );
+  }
+
+  /// Get active calories burned today
+  static Future<int> getTodayCalories() async {
+    try {
+      await configure();
+      final now = DateTime.now();
+      final midnight = DateTime(now.year, now.month, now.day);
+      
+      final data = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.ACTIVE_ENERGY_BURNED],
+        startTime: midnight,
+        endTime: now,
+      );
+      
+      double total = 0.0;
+      for (final point in data) {
+        if (point.value is NumericHealthValue) {
+          total += (point.value as NumericHealthValue).numericValue.toDouble();
+        }
+      }
+      return total.toInt();
+    } catch (e) {
+      debugPrint('Error getting today calories: $e');
+      return 0;
+    }
+  }
+
+  /// Get today's workouts
+  static Future<List<HealthDataPoint>> getTodayWorkouts() async {
+    try {
+      await configure();
+      final now = DateTime.now();
+      final midnight = DateTime(now.year, now.month, now.day);
+      
+      return await _health.getHealthDataFromTypes(
+        types: [HealthDataType.WORKOUT],
+        startTime: midnight,
+        endTime: now,
+      );
+    } catch (e) {
+      debugPrint('Error getting today workouts: $e');
+      return [];
+    }
   }
 }

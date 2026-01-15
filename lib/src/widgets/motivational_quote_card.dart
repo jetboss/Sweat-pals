@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../utils/constants.dart';
+import '../theme/app_colors.dart';
 
 class MotivationalQuoteCard extends StatefulWidget {
   const MotivationalQuoteCard({super.key});

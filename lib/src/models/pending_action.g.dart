@@ -1,44 +1,41 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'meal_entry.dart';
+part of 'pending_action.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class MealEntryAdapter extends TypeAdapter<MealEntry> {
+class PendingActionAdapter extends TypeAdapter<PendingAction> {
   @override
-  final int typeId = 1;
+  final int typeId = 24;
 
   @override
-  MealEntry read(BinaryReader reader) {
+  PendingAction read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return MealEntry(
+    return PendingAction(
       id: fields[0] as String,
-      name: fields[1] as String,
-      calories: fields[2] as int,
-      dateTime: fields[3] as DateTime,
-      notes: fields[4] as String?,
+      type: fields[1] as String,
+      payload: (fields[2] as Map).cast<String, dynamic>(),
+      createdAt: fields[3] as DateTime,
     );
   }
 
   @override
-  void write(BinaryWriter writer, MealEntry obj) {
+  void write(BinaryWriter writer, PendingAction obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.name)
+      ..write(obj.type)
       ..writeByte(2)
-      ..write(obj.calories)
+      ..write(obj.payload)
       ..writeByte(3)
-      ..write(obj.dateTime)
-      ..writeByte(4)
-      ..write(obj.notes);
+      ..write(obj.createdAt);
   }
 
   @override
@@ -47,7 +44,7 @@ class MealEntryAdapter extends TypeAdapter<MealEntry> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is MealEntryAdapter &&
+      other is PendingActionAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

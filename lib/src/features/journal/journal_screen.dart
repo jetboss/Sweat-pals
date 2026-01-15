@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'journal_provider.dart';
 import 'morning_prompt_screen.dart';
 import '../../utils/page_routes.dart';
+import '../../widgets/animated_widgets.dart';
+import '../../theme/app_colors.dart';
 
 class JournalScreen extends ConsumerWidget {
   const JournalScreen({super.key});
@@ -21,7 +23,7 @@ class JournalScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                     const Icon(Icons.book_rounded, size: 64, color: Colors.grey),
+                     const Icon(Icons.book_rounded, size: 64, color: AppColors.textSecondary),
                      const SizedBox(height: 16),
                      Text(
                        'Start Your Day Right',
@@ -31,7 +33,7 @@ class JournalScreen extends ConsumerWidget {
                      Text(
                        'Your morning journal helps you set intentions, practice gratitude, and stay focused on your goals.',
                        textAlign: TextAlign.center,
-                       style: TextStyle(color: Colors.grey[600]),
+                       style: TextStyle(color: AppColors.textSecondary),
                      ),
                      const SizedBox(height: 24),
                      ElevatedButton.icon(
@@ -52,7 +54,7 @@ class JournalScreen extends ConsumerWidget {
               },
             ),
       floatingActionButton: entries.isNotEmpty
-          ? FloatingActionButton(
+          ? GlowingFAB(
               onPressed: () => _openPrompt(context),
               child: const Icon(Icons.add_rounded),
             )
@@ -80,7 +82,7 @@ class JournalScreen extends ConsumerWidget {
                   DateFormat('EEEE, MMM d').format(entry.date),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                const Icon(Icons.wb_sunny_rounded, color: Colors.orange),
+                const Icon(Icons.wb_sunny_rounded, color: AppColors.primary),
               ],
             ),
             const Divider(height: 24),
@@ -100,7 +102,7 @@ class JournalScreen extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.grey[600]),
+          Icon(icon, size: 18, color: AppColors.textSecondary),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -111,7 +113,7 @@ class JournalScreen extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 Text(content),

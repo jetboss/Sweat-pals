@@ -3,13 +3,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:confetti/confetti.dart';
 import '../../models/workout.dart';
 import '../../providers/workouts_provider.dart';
 import '../../providers/workout_progress_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../services/audio_service.dart';
 import '../../services/sensory_service.dart';
+import '../../services/database_service.dart';
 
 class WorkoutTimerScreen extends ConsumerStatefulWidget {
   final Workout workout;
@@ -27,7 +27,6 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
   bool _isResting = false;
   Timer? _timer;
   int _totalElapsedSeconds = 0;
-  late ConfettiController _confettiController;
   final WorkoutAudioService _audioService = WorkoutAudioService();
   
   // Immersive Animations
@@ -37,8 +36,10 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     
+    // Set presence to 'working_out'
+    DatabaseService().updatePresenceStatus('working_out');
+
     // Setup breathing animation (simulates heart rate/breath)
     _breathingController = AnimationController(
       vsync: this,
@@ -54,8 +55,10 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
 
   @override
   void dispose() {
+    // Revert presence to 'online'
+    DatabaseService().updatePresenceStatus('online');
+    
     _timer?.cancel();
-    _confettiController.dispose();
     _audioService.stop();
     _breathingController.dispose();
     super.dispose();
@@ -192,8 +195,6 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
   }
 
   void _showHighFive(List<String> newlyUnlocked) {
-    _confettiController.play();
-    
     final allWorkouts = ref.read(workoutsProvider);
     final unlockedWorkouts = newlyUnlocked
         .map((id) => allWorkouts.firstWhere((w) => w.id == id, orElse: () => allWorkouts.first))
@@ -207,20 +208,6 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
       pageBuilder: (context, anim1, anim2) {
         return Stack(
           children: [
-            Align(
-              alignment: Alignment.topCenter,
-              child: ConfettiWidget(
-                confettiController: _confettiController,
-                blastDirection: pi / 2,
-                maxBlastForce: 5,
-                minBlastForce: 2,
-                emissionFrequency: 0.05,
-                numberOfParticles: 50,
-                gravity: 0.1,
-                shouldLoop: false,
-                colors: const [Colors.pink, Colors.cyan, Colors.amber],
-              ),
-            ),
             Center(
               child: Material(
                 color: Colors.transparent,

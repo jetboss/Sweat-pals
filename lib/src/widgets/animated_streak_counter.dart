@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:confetti/confetti.dart';
+import 'package:flutter/material.dart';
 
 /// A beautiful animated streak counter with flame animation and confetti celebrations
 class AnimatedStreakCounter extends StatefulWidget {
@@ -22,7 +22,6 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
   late AnimationController _flameController;
   late AnimationController _pulseController;
   late AnimationController _numberController;
-  late ConfettiController _confettiController;
   
   int _previousStreak = 0;
 
@@ -48,17 +47,6 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );
-
-    // Check for milestone celebration on init
-    if (_isMilestone(widget.streak)) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _confettiController.play();
-      });
-    }
   }
 
   @override
@@ -69,11 +57,6 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
       // Animate the number change
       _numberController.forward(from: 0);
       _pulseController.forward(from: 0);
-      
-      // Check if we hit a milestone
-      if (widget.streak > _previousStreak && _isMilestone(widget.streak)) {
-        _confettiController.play();
-      }
       
       _previousStreak = widget.streak;
     }
@@ -105,7 +88,6 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
     _flameController.dispose();
     _pulseController.dispose();
     _numberController.dispose();
-    _confettiController.dispose();
     super.dispose();
   }
 
@@ -117,28 +99,6 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
     return Stack(
       alignment: Alignment.topCenter,
       children: [
-        // Confetti overlay
-        Align(
-          alignment: Alignment.topCenter,
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirection: pi / 2, // downward
-            maxBlastForce: 5,
-            minBlastForce: 2,
-            emissionFrequency: 0.05,
-            numberOfParticles: 20,
-            gravity: 0.2,
-            shouldLoop: false,
-            colors: const [
-              Colors.orange,
-              Colors.red,
-              Colors.yellow,
-              Colors.pink,
-              Colors.purple,
-            ],
-          ),
-        ),
-        
         // Main streak card
         GestureDetector(
           onTap: widget.onTap,

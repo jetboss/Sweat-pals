@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/workout.dart';
 import '../../providers/workouts_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/animated_widgets.dart';
 
 class CreateWorkoutScreen extends ConsumerStatefulWidget {
   const CreateWorkoutScreen({super.key});
@@ -146,9 +147,8 @@ class _CreateWorkoutScreenState extends ConsumerState<CreateWorkoutScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: GlowingFAB(
         onPressed: _addExercise,
-        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
       ),
     );

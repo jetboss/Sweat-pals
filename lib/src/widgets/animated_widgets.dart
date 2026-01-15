@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 /// An animated counter that counts up from 0 to the target value
 class AnimatedCounter extends StatefulWidget {
@@ -188,6 +189,48 @@ class _SpringButtonState extends State<SpringButton>
           );
         },
       ),
+    );
+  }
+}
+
+/// A floating action button with a glowing effect for dark mode
+class GlowingFAB extends StatelessWidget {
+  final VoidCallback onPressed;
+  final Widget child;
+  final String? label;
+
+  const GlowingFAB({
+    super.key,
+    required this.onPressed,
+    required this.child,
+    this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      decoration: isDark ? BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.4),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ) : null,
+      child: label != null
+        ? FloatingActionButton.extended(
+            onPressed: onPressed,
+            label: Text(label!),
+            icon: child,
+          )
+        : FloatingActionButton(
+            onPressed: onPressed,
+            child: child,
+          ),
     );
   }
 }

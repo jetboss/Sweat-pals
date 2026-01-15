@@ -19,7 +19,7 @@ dependencies:
   intl: ^0.18.1
   uuid: ^4.5.2
   path_provider: ^2.1.2
-  image_picker: ^1.0.7
+  image_picker: ^1.2.1
   flutter_local_notifications: ^19.5.0
   timezone: ^0.10.1
   path: ^1.9.0
@@ -27,25 +27,26 @@ dependencies:
   lottie: ^3.1.0 # Vector animations
   cached_network_image: ^3.3.1 # Image caching for workout visuals
   shimmer: ^3.0.0
-  confetti: ^0.7.0 # Celebration animations
   google_fonts: ^6.1.0 # Premium typography
   http: ^1.2.0 # For realistic TTS API calls
   just_audio: ^0.9.30 # Audio playback for fetched TTS
-  audioplayers: ^5.2.1 # Simple SFX playback
   flutter_tts: ^4.2.3
   audio_session: ^0.1.21
-  health: ^11.0.0  # HealthKit (iOS) + Health Connect (Android) - shelved
-  
-  # Walk Tracking
-  pedometer_2: ^5.0.4        # Step counting from phone sensor
-  geolocator: ^13.0.2        # GPS location tracking
-  flutter_map: ^7.0.2        # OpenStreetMap (no API key needed)
-  latlong2: ^0.9.1           # Lat/Long utilities
-  permission_handler: ^11.3.1 # Runtime permissions
+
+  # Backend & Auth
+  supabase_flutter: ^2.0.0
+  health: ^13.2.1
+  permission_handler: ^12.0.1
+  confetti: ^0.7.0
+
+  connectivity_plus: ^5.0.2
+  geolocator: ^10.1.0
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.0
   flutter_lints: ^2.0.3
   build_runner: ^2.4.7
   riverpod_generator: ^2.3.9

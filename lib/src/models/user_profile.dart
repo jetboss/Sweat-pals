@@ -28,6 +28,21 @@ class UserProfile extends HiveObject {
   @HiveField(7)
   final DateTime startDate;
 
+  @HiveField(8)
+  final int? preferredWorkoutHour; // 0-23
+
+  @HiveField(9)
+  final String? fitnessLevel; // beginner/intermediate/advanced
+
+  @HiveField(10)
+  final String? bio;
+
+  @HiveField(11)
+  final int? restTokens; // Default 3
+
+  @HiveField(12)
+  final int? sweatCoins; // Default 100
+
   UserProfile({
     required this.name,
     required this.startingWeight,
@@ -37,6 +52,11 @@ class UserProfile extends HiveObject {
     required this.sex,
     required this.foodsToAvoid,
     required this.startDate,
+    this.preferredWorkoutHour,
+    this.fitnessLevel,
+    this.bio,
+    this.restTokens = 3,
+    this.sweatCoins = 100,
   });
 
   double get bmi => startingWeight / ((height / 100) * (height / 100));

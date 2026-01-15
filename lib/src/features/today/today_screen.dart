@@ -4,32 +4,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/workout_calendar_provider.dart';
-import '../../providers/avatar_provider.dart';
-import '../../providers/pedometer_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/page_routes.dart';
 import '../tracking/tracking_provider.dart';
+import '../tracking/tracking_screen.dart';
 import '../workouts/workout_timer_screen.dart';
 import '../journal/journal_provider.dart';
 import '../journal/morning_prompt_screen.dart';
 import '../journal/journal_screen.dart';
-import '../gamification/sweat_pal_avatar.dart';
-import '../gamification/achievements_screen.dart';
 import '../review/progress_timeline_screen.dart';
+import '../../providers/partnership_provider.dart';
+import '../../providers/health_provider.dart';
+import '../../services/auth_service.dart';
+import '../../services/database_service.dart';
+import '../../models/squad.dart';
+import '../squads/squad_screen.dart';
+import '../partnership/find_partner_screen.dart';
+import '../../widgets/animated_streak_counter.dart';
+import '../pacts/pacts_screen.dart';
 
-/// Provider to track water intake (glasses per day, resets daily)
-final waterIntakeProvider = StateProvider<int>((ref) => 0);
+final partnerLogsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, userId) {
+  return DatabaseService().streamPartnerLogs(userId);
+});
+
+final notificationStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+  return DatabaseService().streamNotifications();
+});
+
+
 
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProvider);
-    final userName = user?.name ?? 'Sweat Pal';
-    final now = DateTime.now();
-    final greeting = _getGreeting(now.hour);
-    
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -37,28 +45,22 @@ class TodayScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero Greeting
-              _buildHeroGreeting(context, ref, greeting, userName),
+              const Text("Sweat Pals", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
-              
+              // Streak Counter
+              _buildStreakCard(context, ref),
+              const SizedBox(height: 24),
+              // Squad Status Card
+              _buildSquadStatusCard(context, ref),
+              const SizedBox(height: 24),
               // Daily Checklist
               _buildDailyChecklist(context, ref),
               const SizedBox(height: 24),
-              
-              // Today's Workout
-              _buildTodaysWorkout(context, ref),
+              // Today's Activity
+              _buildActivityCard(context, ref),
               const SizedBox(height: 24),
-              
-              // Water Tracker
-              _buildWaterTracker(context, ref),
-              const SizedBox(height: 24),
-              
               // Quick Actions
-              _buildQuickActions(context),
-              const SizedBox(height: 24),
-              
-              // Quick Stats
-              _buildQuickStats(context, ref),
+              _buildQuickActions(context, ref),
               const SizedBox(height: 100),
             ],
           ),
@@ -67,325 +69,339 @@ class TodayScreen extends ConsumerWidget {
     );
   }
 
-  String _getGreeting(int hour) {
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+
+
+  Widget _buildStreakCard(BuildContext context, WidgetRef ref) {
+    final streak = ref.watch(trackingProvider.notifier).calculateStreak();
+    final user = ref.read(userProvider);
+    final tokens = user?.restTokens ?? 0;
+    
+    // Check if frozen today or completed
+    // Note: This logic could be moved to provider but doing here for MVP
+    final checkIns = ref.watch(trackingProvider);
+    final today = DateTime.now();
+    bool isCompletedOrFrozen = false;
+    for (var checkIn in checkIns) {
+       if (checkIn.date.year == today.year && checkIn.date.month == today.month && checkIn.date.day == today.day) {
+         if (checkIn.exerciseCompleted || checkIn.isFrozen) {
+           isCompletedOrFrozen = true;
+           break;
+         }
+       }
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => TrackingScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryVariant],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 28)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$streak day streak',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        streak == 0 ? 'Start today!' : 'Keep it up! 💪',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                      if (tokens > 0) ...[
+                         const SizedBox(width: 8),
+                         Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4)),
+                           child: Text('❄️ $tokens', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                         ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (!isCompletedOrFrozen && tokens > 0)
+              TextButton(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Freeze Streak? ❄️'),
+                      content: Text('Use 1 Rest Token to keep your streak alive today?\nYou have $tokens tokens left.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Freeze')),
+                      ],
+                    ),
+                  );
+                  
+                  if (confirmed == true) {
+                    await ref.read(trackingProvider.notifier).freezeToday();
+                  }
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: const Text('Freeze'),
+              )
+            else
+               const Icon(Icons.chevron_right, color: Colors.white),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildHeroGreeting(BuildContext context, WidgetRef ref, String greeting, String name) {
-    final avatarState = ref.watch(avatarProvider);
-    final streak = ref.watch(trackingProvider.notifier).calculateStreak();
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: AppColors.brandGradient,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          SweatPalAvatar(state: avatarState, size: 70),
-          const SizedBox(width: 16),
-          Expanded(
+  Widget _buildSquadStatusCard(BuildContext context, WidgetRef ref) {
+    return StreamBuilder<Map<String, dynamic>?>(
+      stream: DatabaseService().streamMySquad(),
+      builder: (context, snapshot) {
+        final squadData = snapshot.data;
+        
+        if (squadData == null) {
+           return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.divider),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '$greeting!',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-                ),
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Icon(Icons.groups_3_rounded, size: 48, color: AppColors.textSecondary),
+                const SizedBox(height: 12),
+                const Text(
+                  "Flying Solo?",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+                const Text(
+                  "Join a Pack to unlock the chat and map.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SquadScreen()));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Text(
+                      "Find a Squad",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$streak day streak',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const FindPartnerScreen()));
+                  },
+                  child: Text(
+                    "Or find a 1:1 Partner",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          Text(
-            DateFormat('EEE\nMMM d').format(DateTime.now()),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontWeight: FontWeight.bold,
+          );
+        }
+
+        final squad = Squad.fromJson(squadData);
+        final isWolf = squad.isWolfPack;
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const SquadScreen()));
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isWolf 
+                  ? [AppColors.primaryVariant, AppColors.primary] 
+                  : [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      squad.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isWolf ? "WOLF PACK" : "SOCIAL CLUB",
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Tap to view grid, chat & map",
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
             ),
           ),
+        );
+      },
+    );
+  }
+  Widget _buildDailyChecklist(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Today's Goals",
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        _ChecklistItem(
+          icon: Icons.sunny,
+          label: "Morning Journal",
+          isComplete: false,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MorningPromptScreen())), // Simplified nav
+        ),
+        _ChecklistItem(
+          icon: Icons.fitness_center, 
+          label: "Workout",
+          isComplete: false, 
+          onTap: () {}, // Todo
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActivityCard(BuildContext context, WidgetRef ref) {
+    final healthState = ref.watch(healthProvider);
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.darkCardBackground,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.directions_run, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text("Daily Activity", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              if (healthState.isLoading)
+                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              else if (!healthState.isConnected)
+                 GestureDetector(
+                   onTap: () => ref.read(healthProvider.notifier).requestSync(),
+                   child: Container(
+                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                     decoration: BoxDecoration(
+                       color: AppColors.primary,
+                       borderRadius: BorderRadius.circular(12),
+                     ),
+                     child: const Text("Sync", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                   ),
+                 ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+               _ActivityStat(
+                 icon: Icons.do_not_step, 
+                 value: healthState.steps.toString(),
+                 label: "Steps",
+                 color: const Color(0xFF651FFF), // Accent 
+               ),
+               Container(width: 1, height: 40, color: Colors.white10),
+               _ActivityStat(
+                 icon: Icons.local_fire_department_rounded, 
+                 value: healthState.calories.toString(), 
+                 label: "Kcal",
+                 color: const Color(0xFFFF9F0A), // Warning/Fire
+               ),
+            ],
+          ),
+          if (!healthState.isConnected) ...[
+            const SizedBox(height: 16),
+            const Text(
+              "Connect your device to track steps automagically.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildDailyChecklist(BuildContext context, WidgetRef ref) {
-    final journalEntries = ref.watch(journalProvider);
-    final hasJournaled = journalEntries.any((e) => 
-      e.date.year == DateTime.now().year && 
-      e.date.month == DateTime.now().month && 
-      e.date.day == DateTime.now().day
-    );
-    
-    final steps = ref.watch(pedometerProvider).valueOrNull ?? 0;
-    final stepGoal = ref.watch(stepGoalProvider);
-    final stepsComplete = steps >= stepGoal;
-    
-    final todaysWorkouts = ref.watch(workoutCalendarProvider.notifier).todaysWorkouts;
-    final workoutComplete = todaysWorkouts.isNotEmpty && todaysWorkouts.every((w) => w.isCompleted);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.checklist_rounded, color: AppColors.primary),
-            const SizedBox(width: 8),
-            Text(
-              "Today's Tasks",
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _ChecklistItem(
-          icon: Icons.edit_note_rounded,
-          label: 'Complete morning journal',
-          isComplete: hasJournaled,
-          onTap: () => context.pushAnimated(const MorningPromptScreen()),
-        ),
-        _ChecklistItem(
-          icon: Icons.directions_walk,
-          label: 'Hit step goal (${steps.toString()}/$stepGoal)',
-          isComplete: stepsComplete,
-        ),
-        _ChecklistItem(
-          icon: Icons.fitness_center,
-          label: 'Complete workout',
-          isComplete: workoutComplete,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTodaysWorkout(BuildContext context, WidgetRef ref) {
-    final calendarNotifier = ref.watch(workoutCalendarProvider.notifier);
-    final todaysWorkouts = calendarNotifier.todaysWorkouts;
-    final incompleteWorkouts = todaysWorkouts.where((w) => !w.isCompleted).toList();
-
-    if (incompleteWorkouts.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.calendar_today, color: Colors.grey),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('No workout scheduled', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('Enjoy your rest day!', style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final scheduled = incompleteWorkouts.first;
-    final workout = calendarNotifier.getWorkoutForSchedule(scheduled);
-    
-    if (workout == null) return const SizedBox.shrink();
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primary.withValues(alpha: 0.1), Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.fitness_center, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('TODAY\'S WORKOUT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 1)),
-                        Text(workout.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _WorkoutStat(icon: Icons.timer, label: '${workout.durationMinutes} min'),
-                  const SizedBox(width: 16),
-                  _WorkoutStat(icon: Icons.signal_cellular_alt, label: workout.levelDisplayName),
-                  const SizedBox(width: 16),
-                  _WorkoutStat(icon: Icons.fitness_center, label: '${workout.exercises.length} exercises'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    context.pushAnimated(WorkoutTimerScreen(workout: workout)).then((_) {
-                      ref.read(workoutCalendarProvider.notifier).markComplete(scheduled.id);
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('Start Workout 💪', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWaterTracker(BuildContext context, WidgetRef ref) {
-    final glasses = ref.watch(waterIntakeProvider);
-    const goal = 8;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.water_drop, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text(
-              'Water Intake',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            Text(
-              '$glasses / $goal glasses',
-              style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(goal, (index) {
-            final isFilled = index < glasses;
-            return GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                if (isFilled && index == glasses - 1) {
-                  ref.read(waterIntakeProvider.notifier).state = glasses - 1;
-                } else if (!isFilled) {
-                  ref.read(waterIntakeProvider.notifier).state = index + 1;
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 36,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isFilled ? Colors.blue : Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isFilled ? Colors.blue : Colors.blue.withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                ),
-                child: Icon(
-                  Icons.water_drop,
-                  color: isFilled ? Colors.white : Colors.blue.withValues(alpha: 0.3),
-                  size: 20,
-                ),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickStats(BuildContext context, WidgetRef ref) {
-    final steps = ref.watch(pedometerProvider).valueOrNull ?? 0;
-    final streak = ref.watch(trackingProvider.notifier).calculateStreak();
-    final avatarLevel = ref.watch(avatarProvider).level;
-
-    return Row(
-      children: [
-        Expanded(child: _QuickStatCard(icon: Icons.directions_walk, value: steps.toString(), label: 'Steps')),
-        const SizedBox(width: 12),
-        Expanded(child: _QuickStatCard(icon: Icons.local_fire_department, value: '$streak', label: 'Day Streak', color: Colors.orange)),
-        const SizedBox(width: 12),
-        Expanded(child: _QuickStatCard(icon: Icons.star, value: 'Lv $avatarLevel', label: 'Level', color: Colors.amber)),
-      ],
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -404,34 +420,217 @@ class TodayScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: _QuickActionButton(
-                icon: Icons.emoji_events_rounded,
-                label: 'Trophies',
-                color: Colors.purple,
-                onTap: () => context.pushAnimated(const AchievementsScreen()),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _QuickActionButton(
-                icon: Icons.book_rounded,
-                label: 'Journal',
-                color: Colors.teal,
-                onTap: () => context.pushAnimated(const JournalScreen()),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _QuickActionButton(
                 icon: Icons.timeline_rounded,
-                label: 'Progress',
-                color: Colors.blue,
-                onTap: () => context.pushAnimated(const ProgressTimelineScreen()),
+                label: 'View Progress',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgressTimelineScreen())),
               ),
             ),
+              Expanded(
+                child: _QuickActionButton(
+                  icon: Icons.notifications_active_rounded,
+                  label: 'Send Vibes',
+                  color: AppColors.primary,
+                  onTap: () => _showSendVibesSheet(context, ref),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+           Row(
+            children: [
+              Expanded(
+                child: _QuickActionButton(
+                  icon: Icons.handshake_rounded,
+                  label: 'Social Contracts',
+                  color: Colors.orange,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PactsScreen())),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(child: SizedBox()), // Spacer
+            ],
+          ),
+          // Listen for incoming nudges
+          const _IncomingNudgeListener(),
+        ],
+      );
+  }
+
+  void _showSendVibesSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Send Good Vibes", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _VibeOption(emoji: '👋', label: 'Wave', onTap: () => _sendVibe(context, ref, 'wave')),
+                _VibeOption(emoji: '🔥', label: 'Fire', onTap: () => _sendVibe(context, ref, 'fire')),
+                _VibeOption(emoji: '💪', label: 'Flex', onTap: () => _sendVibe(context, ref, 'flex')),
+                _VibeOption(emoji: '😴', label: 'Wake Up', onTap: () => _sendVibe(context, ref, 'wakeup')),
+              ],
+            ),
+            const SizedBox(height: 24),
           ],
         ),
-      ],
+      ),
     );
+  }
+
+  Future<void> _sendVibe(BuildContext context, WidgetRef ref, String type) async {
+    Navigator.pop(context); // Close sheet
+    HapticFeedback.mediumImpact();
+
+    final partnership = ref.read(activePartnershipProvider);
+    if (partnership != null) {
+      final myId = AuthService().currentUserId;
+      final p1 = partnership['user_1'] as String;
+      final p2 = partnership['user_2'] as String;
+      final partnerId = myId == p1 ? p2 : p1;
+
+      try {
+        await DatabaseService().sendNudge(partnerId, type: type);
+        if (context.mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Vibe sent! $type'),
+              backgroundColor: AppColors.primary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to send vibe.')),
+          );
+        }
+      }
+    } else {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No partner to vibe with yet!')),
+      );
+    }
+  }
+}
+
+class _VibeOption extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final VoidCallback onTap;
+
+  const _VibeOption({required this.emoji, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Text(emoji, style: const TextStyle(fontSize: 32)),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+// _PartnerStatusWidget removed - replaced by Squad system
+
+class _IncomingNudgeListener extends ConsumerStatefulWidget {
+  const _IncomingNudgeListener();
+
+  @override
+  ConsumerState<_IncomingNudgeListener> createState() => _IncomingNudgeListenerState();
+}
+
+class _IncomingNudgeListenerState extends ConsumerState<_IncomingNudgeListener> {
+  DateTime? _lastNudgeTime;
+
+  @override
+  Widget build(BuildContext context) {
+    final notificationsAsync = ref.watch(notificationStreamProvider);
+
+    ref.listen(notificationStreamProvider, (previous, next) {
+      if (next.hasValue && next.value!.isNotEmpty) {
+        final latest = next.value!.first;
+        final createdAt = DateTime.tryParse(latest['created_at']);
+        
+        // Ensure it's a new nudge (created after we started listening or last handled)
+        // A simple check is "is it within the last 10 seconds?" 
+        // Real logic would track the 'seen' state in DB, but for MVP:
+        if (createdAt != null && 
+            DateTime.now().difference(createdAt).inSeconds < 10 && 
+            (_lastNudgeTime == null || createdAt.isAfter(_lastNudgeTime!))) {
+              
+          _lastNudgeTime = createdAt;
+          HapticFeedback.heavyImpact();
+          
+          final type = latest['type'] as String? ?? 'nudge';
+          String message = "Partner says: Hi! 👋";
+          String emoji = "👋";
+          Color color = AppColors.primary;
+
+          switch (type) {
+            case 'fire':
+              message = "Partner says: You're on FIRE! 🔥";
+              emoji = "🔥";
+              color = Colors.orange;
+              break;
+            case 'flex':
+              message = "Partner says: Stay HARD! 💪";
+              emoji = "💪";
+              color = Colors.green;
+              break;
+            case 'wakeup':
+              message = "Partner says: WAKE UP! 😴";
+              emoji = "⏰";
+              color = Colors.red;
+              break;
+            case 'wave':
+            default:
+              // Default
+              break;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+                ],
+              ),
+              backgroundColor: color,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    });
+
+    return const SizedBox.shrink(); 
   }
 }
 
@@ -473,19 +672,27 @@ class _ChecklistItem extends StatelessWidget {
   }
 }
 
-class _WorkoutStat extends StatelessWidget {
+class _ActivityStat extends StatelessWidget {
   final IconData icon;
+  final String value;
   final String label;
+  final Color color;
 
-  const _WorkoutStat({required this.icon, required this.label});
+  const _ActivityStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+        Icon(icon, color: color, size: 28),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
       ],
     );
   }
@@ -515,7 +722,7 @@ class _QuickStatCard extends StatelessWidget {
             Icon(icon, color: c, size: 28),
             const SizedBox(height: 8),
             Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: c)),
-            Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ],
         ),
       ),

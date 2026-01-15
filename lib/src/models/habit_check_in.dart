@@ -28,6 +28,9 @@ class HabitCheckIn extends HiveObject {
   @HiveField(7)
   final bool exerciseCompleted;
 
+  @HiveField(8)
+  final bool isFrozen;
+
   HabitCheckIn({
     required this.id,
     required this.date,
@@ -37,5 +40,6 @@ class HabitCheckIn extends HiveObject {
     required this.drankWater,
     required this.mood,
     required this.exerciseCompleted,
+    this.isFrozen = false,
   });
 }

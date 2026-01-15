@@ -5,12 +5,11 @@ import '../../models/workout.dart';
 import '../../models/workout_progress.dart';
 import '../../providers/workouts_provider.dart';
 import '../../providers/workout_progress_provider.dart';
-import '../../providers/avatar_provider.dart';
+import '../../providers/workout_progress_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/page_routes.dart';
+import '../../widgets/animated_widgets.dart';
 import 'workout_timer_screen.dart';
-import '../gamification/sweat_pal_avatar.dart';
-import '../../widgets/walk_workout_card.dart';
 import '../../widgets/sweat_pal_card.dart';
 
 import 'create_workout_screen.dart';
@@ -94,45 +93,6 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // SweatPal Avatar
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: Column(
-                  children: [
-                    SweatPalAvatar(
-                      state: ref.watch(avatarProvider),
-                      size: 140,
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.local_fire_department, color: Colors.orange, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Level ${ref.watch(avatarProvider).level} • ${progress.currentStreak} Day Streak",
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Walk Workout Card (step count + GPS tracking)
-            const WalkWorkoutCard(),
-            const SizedBox(height: 16),
-
             // Stats Row
             _buildStatsRow(progress),
             const SizedBox(height: 24),
@@ -177,17 +137,16 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         ),
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 90),
-        child: FloatingActionButton.extended(
+        padding: const EdgeInsets.only(bottom: 100),
+        child: GlowingFAB(
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const CreateWorkoutScreen()),
             );
           },
-          label: const Text('Create'),
-          icon: const Icon(Icons.add),
-          backgroundColor: AppColors.primary,
+          label: 'Create',
+          child: const Icon(Icons.add),
         ),
       ),
     );
@@ -237,14 +196,14 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.pink.shade100, Colors.pink.shade50],
+            colors: [AppColors.primary.withOpacity(0.2), AppColors.primary.withOpacity(0.1)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.pink.withValues(alpha: 0.2),
+              color: AppColors.primary.withOpacity(0.2),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

@@ -5,6 +5,7 @@ import 'tracking_provider.dart';
 import 'daily_check_in_form.dart';
 import '../../utils/page_routes.dart';
 import '../../widgets/animated_streak_counter.dart';
+import '../../widgets/animated_widgets.dart';
 import '../../widgets/sweat_pal_card.dart';
 
 class TrackingScreen extends ConsumerWidget {
@@ -35,11 +36,11 @@ class TrackingScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 90),
-        child: FloatingActionButton.extended(
+        padding: const EdgeInsets.only(bottom: 100),
+        child: GlowingFAB(
           onPressed: () => context.pushAnimated(const DailyCheckInForm()),
-          label: const Text('Check-in'),
-          icon: const Icon(Icons.add_rounded),
+          label: 'Check-in',
+          child: const Icon(Icons.add_rounded),
         ),
       ),
     );
