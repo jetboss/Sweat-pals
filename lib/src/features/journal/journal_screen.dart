@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'journal_provider.dart';
 import 'morning_prompt_screen.dart';
-import '../../utils/page_routes.dart';
+import 'morning_prompt_screen.dart';
 import '../../widgets/animated_widgets.dart';
 import '../../theme/app_colors.dart';
 
@@ -30,7 +31,7 @@ class JournalScreen extends ConsumerWidget {
                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                      ),
                      const SizedBox(height: 8),
-                     Text(
+                     const Text(
                        'Your morning journal helps you set intentions, practice gratitude, and stay focused on your goals.',
                        textAlign: TextAlign.center,
                        style: TextStyle(color: AppColors.textSecondary),
@@ -63,7 +64,7 @@ class JournalScreen extends ConsumerWidget {
   }
 
   void _openPrompt(BuildContext context) {
-    context.pushAnimated(const MorningPromptScreen());
+    context.push('/today/morning-prompt');
   }
 
   Widget _buildJournalCard(BuildContext context, dynamic entry) {
@@ -110,7 +111,7 @@ class JournalScreen extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textSecondary,

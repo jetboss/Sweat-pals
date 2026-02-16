@@ -1,18 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../services/database_service.dart';
 
-class CreateSquadScreen extends StatefulWidget {
+class CreateSquadScreen extends ConsumerStatefulWidget {
   const CreateSquadScreen({super.key});
 
   @override
-  State<CreateSquadScreen> createState() => _CreateSquadScreenState();
+  ConsumerState<CreateSquadScreen> createState() => _CreateSquadScreenState();
 }
 
-class _CreateSquadScreenState extends State<CreateSquadScreen> {
+class _CreateSquadScreenState extends ConsumerState<CreateSquadScreen> {
   final _nameController = TextEditingController();
   String _selectedTier = 'social'; // 'social' | 'wolf'
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final userAsync = ref.read(userProvider);
+    // Smart Default: If intermediate/advanced/pro, suggest Wolf Pack
+    if (userAsync.value != null && userAsync.value!.fitnessLevel != 'beginner') {
+      _selectedTier = 'wolf';
+    }
+  }
 
   void _createSquad() async {
     if (_nameController.text.trim().isEmpty) return;
@@ -20,7 +32,7 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final squadId = await DatabaseService().createSquad(
+      await ref.read(databaseServiceProvider).createSquad(
         _nameController.text.trim(),
         _selectedTier,
       );
@@ -130,7 +142,7 @@ class _TierSelectionCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : AppColors.cardBackground,
+          color: isSelected ? color.withValues(alpha: 0.1) : AppColors.cardBackground,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? color : AppColors.divider,
@@ -154,7 +166,7 @@ class _TierSelectionCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     description,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                       height: 1.4,

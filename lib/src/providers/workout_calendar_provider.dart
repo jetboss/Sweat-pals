@@ -1,127 +1,129 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:drift/drift.dart' as drift;
+import 'package:uuid/uuid.dart';
 import '../models/scheduled_workout.dart';
 import '../models/workout.dart';
+import '../database/app_database.dart';
 import 'workouts_provider.dart';
+import '../../main.dart';
 
-final workoutCalendarProvider = StateNotifierProvider<WorkoutCalendarNotifier, List<ScheduledWorkout>>((ref) {
-  return WorkoutCalendarNotifier(ref);
-});
-
-class WorkoutCalendarNotifier extends StateNotifier<List<ScheduledWorkout>> {
-  final Ref _ref;
-  int _idCounter = 0;
-
-  WorkoutCalendarNotifier(this._ref) : super([]) {
+class WorkoutCalendarNotifier extends Notifier<List<ScheduledWorkout>> {
+  @override
+  List<ScheduledWorkout> build() {
     _loadScheduledWorkouts();
+    return [];
   }
 
-  /// Load scheduled workouts from Hive
-  void _loadScheduledWorkouts() {
-    final box = Hive.box<ScheduledWorkout>('scheduled_workouts');
-    state = box.values.toList();
-    if (state.isNotEmpty) {
-      // Find highest ID to continue counter
-      final maxId = state
-          .map((s) => int.tryParse(s.id.replaceAll('scheduled_', '')) ?? 0)
-          .reduce((a, b) => a > b ? a : b);
-      _idCounter = maxId + 1;
+  Future<void> _loadScheduledWorkouts() async {
+    try {
+      final db = ref.read(appDatabaseProvider);
+      final results = await db.select(db.scheduledWorkoutsTable).get();
+      
+      state = results.map((row) => ScheduledWorkout(
+        id: row.id,
+        workoutId: row.workoutId,
+        scheduledDate: row.scheduledDate,
+        isCompleted: row.isCompleted,
+        completedAt: row.completedAt,
+      )).toList();
+    } catch (e) {
+      print("Error loading scheduled workouts: $e");
     }
   }
 
-  /// Save scheduled workouts to Hive
   Future<void> _saveScheduledWorkouts() async {
-    final box = Hive.box<ScheduledWorkout>('scheduled_workouts');
-    await box.clear();
-    for (final scheduled in state) {
-      await box.add(scheduled);
+    // Save handled by individual operations
+  }
+
+  Future<void> scheduleWorkout(String workoutId, DateTime date) async{
+    try {
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+      final db = ref.read(appDatabaseProvider);
+      
+      final id = const Uuid().v4();
+      await db.into(db.scheduledWorkoutsTable).insert(
+        ScheduledWorkoutsTableCompanion.insert(
+          id: id,
+          userId: 'current_user', // TODO: Get from user provider
+          workoutId: workoutId,
+          scheduledDate: normalizedDate,
+        ),
+      );
+      
+      final newSchedule = ScheduledWorkout(
+        id: id,
+        workoutId: workoutId,
+        scheduledDate: normalizedDate,
+      );
+      
+      state = [...state, newSchedule];
+    } catch (e) {
+      print("Error scheduling workout: $e");
     }
   }
 
-  /// Schedule a workout for a specific date
-  Future<void> scheduleWorkout(String workoutId, DateTime date) async {
-    final normalizedDate = DateTime(date.year, date.month, date.day);
-    
-    // Check if already scheduled for this day
-    final existing = state.where((s) => 
-      s.workoutId == workoutId &&
-      s.scheduledDate.year == normalizedDate.year &&
-      s.scheduledDate.month == normalizedDate.month &&
-      s.scheduledDate.day == normalizedDate.day
-    ).toList();
-    
-    if (existing.isNotEmpty) return; // Already scheduled
-
-    final newSchedule = ScheduledWorkout(
-      id: 'scheduled_${_idCounter++}',
-      workoutId: workoutId,
-      scheduledDate: normalizedDate,
-    );
-
-    state = [...state, newSchedule];
-    await _saveScheduledWorkouts();
-  }
-
-  /// Remove a scheduled workout
   Future<void> removeScheduledWorkout(String scheduledId) async {
-    state = state.where((s) => s.id != scheduledId).toList();
-    await _saveScheduledWorkouts();
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await (db.delete(db.scheduledWorkoutsTable)..where((t) => t.id.equals(scheduledId))).go();
+      state = state.where((s) => s.id != scheduledId).toList();
+    } catch (e) {
+      print("Error removing scheduled workout: $e");
+    }
   }
 
-  /// Mark a scheduled workout as complete
   Future<void> markComplete(String scheduledId) async {
-    state = state.map((s) {
-      if (s.id == scheduledId) {
-        return s.copyWith(isCompleted: true, completedAt: DateTime.now());
-      }
-      return s;
-    }).toList();
-    await _saveScheduledWorkouts();
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await (db.update(db.scheduledWorkoutsTable)..where((t) => t.id.equals(scheduledId)))
+        .write(ScheduledWorkoutsTableCompanion(
+          isCompleted: const drift.Value(true),
+          completedAt: drift.Value(DateTime.now()),
+        ));
+      
+      state = state.map((s) {
+        if (s.id == scheduledId) {
+          return s.copyWith(isCompleted: true, completedAt: DateTime.now());
+        }
+        return s;
+      }).toList();
+    } catch (e) {
+      print("Error marking workout complete: $e");
+    }
   }
 
-  /// Get scheduled workouts for a specific date
   List<ScheduledWorkout> getForDate(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
-    return state.where((s) => 
+    return state.where((ScheduledWorkout s) => 
       s.scheduledDate.year == normalized.year &&
       s.scheduledDate.month == normalized.month &&
       s.scheduledDate.day == normalized.day
     ).toList();
   }
 
-  /// Get scheduled workouts for a week starting from date
-  Map<DateTime, List<ScheduledWorkout>> getWeekSchedule(DateTime startDate) {
-    final result = <DateTime, List<ScheduledWorkout>>{};
-    
-    for (int i = 0; i < 7; i++) {
-      final day = DateTime(startDate.year, startDate.month, startDate.day + i);
-      result[day] = getForDate(day);
-    }
-    
-    return result;
-  }
-
-  /// Get today's scheduled workouts
   List<ScheduledWorkout> get todaysWorkouts {
     return getForDate(DateTime.now());
   }
 
-  /// Get upcoming scheduled workouts (next 7 days)
-  List<ScheduledWorkout> get upcomingWorkouts {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final nextWeek = today.add(const Duration(days: 7));
-    
-    return state.where((s) => 
-      !s.isCompleted &&
-      s.scheduledDate.isAfter(today.subtract(const Duration(days: 1))) &&
-      s.scheduledDate.isBefore(nextWeek)
-    ).toList()
-      ..sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
+  Map<DateTime, List<ScheduledWorkout>> getWeekSchedule(DateTime startDate) {
+    final result = <DateTime, List<ScheduledWorkout>>{};
+    for (int i = 0; i < 7; i++) {
+      final day = DateTime(startDate.year, startDate.month, startDate.day + i);
+      result[day] = getForDate(day);
+    }
+    return result;
   }
 
-  /// Get the Workout object for a scheduled workout
-  Workout? getWorkoutForSchedule(ScheduledWorkout scheduled) {
-    return _ref.read(workoutsProvider.notifier).getById(scheduled.workoutId);
+  Workout? getWorkoutForSchedule(ScheduledWorkout schedule) {
+    final workouts = ref.read(workoutsProvider);
+    try {
+      return workouts.firstWhere((w) => w.id == schedule.workoutId);
+    } catch (e) {
+      return null;
+    }
   }
 }
+
+final workoutCalendarProvider = NotifierProvider<WorkoutCalendarNotifier, List<ScheduledWorkout>>(() {
+  return WorkoutCalendarNotifier();
+});

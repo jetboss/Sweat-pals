@@ -1,42 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// Provider for theme mode (light/dark)
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
-  return ThemeModeNotifier();
-});
-
-class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  static const String _key = 'theme_mode';
-  
-  ThemeModeNotifier() : super(ThemeMode.system) {
-    _loadTheme();
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    // TODO: Load from Drift Users table
+    return ThemeMode.system;
   }
 
-  Future<void> _loadTheme() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedMode = prefs.getString(_key);
-      if (savedMode != null) {
-        state = ThemeMode.values.firstWhere(
-          (mode) => mode.name == savedMode,
-          orElse: () => ThemeMode.system,
-        );
-      }
-    } catch (e) {
-      debugPrint('Error loading theme preference: $e');
-    }
-  }
-
-  Future<void> setThemeMode(ThemeMode mode) async {
+  void setThemeMode(ThemeMode mode) {
     state = mode;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_key, mode.name);
-    } catch (e) {
-      debugPrint('Error saving theme preference: $e');
-    }
+    // TODO: Save to Drift
   }
 
   void toggleTheme() {
@@ -49,3 +23,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
 
   bool get isDarkMode => state == ThemeMode.dark;
 }
+
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(() {
+  return ThemeModeNotifier();
+});

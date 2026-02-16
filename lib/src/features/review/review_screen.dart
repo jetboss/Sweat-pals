@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'review_provider.dart';
 import 'weekly_review_form.dart';
-import '../../utils/page_routes.dart';
+import 'weekly_review_form.dart';
 import '../../widgets/animated_widgets.dart';
 import '../../theme/app_colors.dart';
 
@@ -27,7 +28,7 @@ class ReviewScreen extends ConsumerWidget {
                   const Text('No reviews yet. Time for your first one, pal?'),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () => context.pushAnimated(const WeeklyReviewForm()),
+                    onPressed: () => context.push('/today/weekly-review'),
                     child: const Text('Start Weekly Review'),
                   ),
                 ],

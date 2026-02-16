@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/workout.dart';
 import '../../models/workout_progress.dart';
 import '../../providers/workouts_provider.dart';
 import '../../providers/workout_progress_provider.dart';
-import '../../providers/workout_progress_provider.dart';
+
 import '../../theme/app_colors.dart';
-import '../../utils/page_routes.dart';
 import '../../widgets/animated_widgets.dart';
 import 'workout_timer_screen.dart';
 import '../../widgets/sweat_pal_card.dart';
@@ -140,10 +140,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         padding: const EdgeInsets.only(bottom: 100),
         child: GlowingFAB(
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const CreateWorkoutScreen()),
-            );
+            context.push('/workouts/new');
           },
           label: 'Create',
           child: const Icon(Icons.add),
@@ -188,7 +185,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        context.pushAnimated(WorkoutTimerScreen(workout: workout));
+        context.push('/workout/${workout.id}/timer', extra: workout);
       },
       child: Container(
         width: 200,
@@ -196,14 +193,14 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primary.withOpacity(0.2), AppColors.primary.withOpacity(0.1)],
+            colors: [AppColors.primary.withValues(alpha: 0.2), AppColors.primary.withValues(alpha: 0.1)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -221,9 +218,9 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
             ),
             Row(
               children: [
-                Icon(Icons.timer_outlined, size: 14, color: AppColors.primaryVariant),
+                const Icon(Icons.timer_outlined, size: 14, color: AppColors.primaryVariant),
                 const SizedBox(width: 4),
-                Text('${workout.durationMinutes} min', style: TextStyle(color: AppColors.primaryVariant)),
+                Text('${workout.durationMinutes} min', style: const TextStyle(color: AppColors.primaryVariant)),
               ],
             ),
           ],
@@ -246,7 +243,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
           onTap: isUnlocked
               ? () {
                   HapticFeedback.lightImpact();
-                  context.pushAnimated(WorkoutTimerScreen(workout: workout));
+                  context.push('/workout/${workout.id}/timer', extra: workout);
                 }
               : () => _showLockedDialog(context, workout, progressNotifier),
           child: Column(
@@ -294,7 +291,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
                         ElevatedButton(
                           onPressed: () {
                             HapticFeedback.mediumImpact();
-                            context.pushAnimated(WorkoutTimerScreen(workout: workout));
+                            context.push('/workout/${workout.id}/timer', extra: workout);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
@@ -346,7 +343,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
                           child: LinearProgressIndicator(
                             value: unlockProgress,
                             backgroundColor: Colors.grey[100],
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                             minHeight: 6,
                           ),
                         ),
@@ -428,7 +425,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
               child: LinearProgressIndicator(
                 value: progressNotifier.getUnlockProgress(workout),
                 backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 minHeight: 8,
               ),
             ),
@@ -436,7 +433,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Got it!'),
           ),
         ],
@@ -461,13 +458,13 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> with SingleTick
         content: Text('Are you sure you want to delete "${workout.title}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               ref.read(workoutsProvider.notifier).deleteCustomWorkout(workout.id);
-              Navigator.pop(ctx);
+              Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Workout deleted')),
               );

@@ -1,46 +1,82 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../models/workout.dart';
+import '../services/database_service.dart';
 
-final workoutsProvider = StateNotifierProvider<WorkoutsNotifier, List<Workout>>((ref) {
-  return WorkoutsNotifier();
-});
-
-class WorkoutsNotifier extends StateNotifier<List<Workout>> {
-  WorkoutsNotifier() : super([]) {
+class WorkoutsNotifier extends Notifier<List<Workout>> {
+  @override
+  List<Workout> build() {
     _loadWorkouts();
+    return [
+      // Static workout data
+      ..._beginnerWorkouts(),
+      ..._kneeFriendlyWorkouts(),
+      ..._intermediateWorkouts(),
+      ..._advancedWorkouts(),
+    ];
   }
 
   void _loadWorkouts() {
-    List<Workout> customWorkouts = [];
-    if (Hive.isBoxOpen('custom_workouts')) {
-      customWorkouts = Hive.box<Workout>('custom_workouts').values.toList();
-    }
-
+    // TODO: Load custom workouts from Drift
     state = [
-      // ========== CUSTOM WORKOUTS ==========
-      ...customWorkouts,
-      // ========== BEGINNER WORKOUTS (7) ==========
       ..._beginnerWorkouts(),
-      // ========== KNEE-FRIENDLY WORKOUTS (3) ==========
       ..._kneeFriendlyWorkouts(),
-      // ========== INTERMEDIATE WORKOUTS (7) ==========
       ..._intermediateWorkouts(),
-      // ========== ADVANCED WORKOUTS (7) ==========
       ..._advancedWorkouts(),
     ];
   }
 
   Future<void> saveCustomWorkout(Workout workout) async {
-    final box = Hive.box<Workout>('custom_workouts');
-    await box.put(workout.id, workout);
+    // TODO: Save to Drift
+    final workoutMap = {
+      'id': workout.id,
+      'title': workout.title,
+      'description': workout.description,
+      'duration_minutes': workout.durationMinutes,
+      'level': workout.level.name,
+      'exercises': workout.exercises.map((e) => {
+        'name': e.name,
+        'duration_seconds': e.durationSeconds,
+        'reps': e.reps,
+        'instructions': e.instructions,
+        'is_low_impact': e.isLowImpact,
+      }).toList(),
+      'created_at': DateTime.now().toIso8601String(),
+    };
+    
+    ref.read(databaseServiceProvider).saveCustomWorkout(workoutMap);
     _loadWorkouts();
   }
 
   Future<void> deleteCustomWorkout(String id) async {
-    final box = Hive.box<Workout>('custom_workouts');
-    await box.delete(id);
+    // TODO: Delete from Drift
+    ref.read(databaseServiceProvider).deleteCustomWorkout(id);
     _loadWorkouts();
+  }
+
+  /// Get all unique exercises from built-in workouts for the builder library
+  List<Exercise> getAllUniqueExercises() {
+    final allBuiltIn = [
+      ..._beginnerWorkouts(),
+      ..._kneeFriendlyWorkouts(),
+      ..._intermediateWorkouts(),
+      ..._advancedWorkouts(),
+    ];
+    
+    final uniqueNames = <String>{};
+    final uniqueExercises = <Exercise>[];
+    
+    for (final w in allBuiltIn) {
+      for (final e in w.exercises) {
+        if (!uniqueNames.contains(e.name)) {
+          uniqueNames.add(e.name);
+          uniqueExercises.add(e);
+        }
+      }
+    }
+    
+    // Sort alphabetically
+    uniqueExercises.sort((a, b) => a.name.compareTo(b.name));
+    return uniqueExercises;
   }
 
   // ====== KNEE-FRIENDLY WORKOUTS ======
@@ -705,13 +741,17 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
 
   /// Save a completed workout session
   Future<void> saveSession(WorkoutSession session) async {
-    final box = Hive.box<WorkoutSession>('workout_sessions');
-    await box.add(session);
+    // TODO: Save to Drift
   }
 
   /// Get workout history
   List<WorkoutSession> getHistory() {
-    final box = Hive.box<WorkoutSession>('workout_sessions');
-    return box.values.toList().reversed.toList();
+    // TODO: Load from Drift
+    return [];
   }
 }
+
+final workoutsProvider = NotifierProvider<WorkoutsNotifier, List<Workout>>(() {
+  return WorkoutsNotifier();
+});
+

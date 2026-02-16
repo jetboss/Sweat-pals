@@ -1,13 +1,15 @@
+import 'dart:io';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../services/partnership_service.dart';
 import '../../services/database_service.dart';
 import '../../providers/user_provider.dart';
-import '../../models/morning_prompt.dart';
-import '../journal/journal_provider.dart';
 import '../auth/login_screen.dart';
 import 'onboarding_state.dart';
 
@@ -75,24 +77,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         // Note: Creating the auth user usually triggers the postgres trigger for profile creation.
         // We might need to update that profile with the name and avatar.
         // The trigger separates name from metadata, but let's just do an upsert/update here to be safe and add avatar.
-        await DatabaseService().syncProfileToSupabase(
+        await ref.read(databaseServiceProvider).syncProfileToSupabase(
           name: _nameController.text.trim(),
           avatarUrl: onboardingState.avatarUrl,
           // user ID is implied from auth context
         );
 
-        // 3. Save Journal Entry
-        if (onboardingState.journalEntry != null && onboardingState.journalEntry!.isNotEmpty) {
-           final entry = MorningPrompt(
-             id: DateTime.now().toIso8601String(),
-             date: DateTime.now(),
-             goalReminder: onboardingState.journalEntry!, // Map intention to goalReminder
-             dailyAction: "Complete onboarding",
-             gratitude: "Starting my journey!",
-             affirmation: "I am ready.",
-           );
-           await ref.read(journalProvider.notifier).addEntry(entry);
-        }
+
+        // TODO: Journal entry collection during onboarding disabled for now
 
         // 4. Fetch Invite Code
         String? code;
@@ -119,7 +111,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -133,14 +125,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await PartnershipService().matchWithPartner(_partnerCodeController.text.trim());
       _nextPage(); // Go to success
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Match Failed: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Match Failed: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _finishOnboarding() {
-    ref.read(onboardingCompleteProvider.notifier).state = true;
+  Future<void> _finishOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_complete', true);
+    
+    // Refresh to trigger navigation change in main app
+    ref.refresh(onboardingCompleteProvider);
   }
 
   @override
@@ -216,6 +212,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: const Text("I Accept", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
           ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+                context.push('/login');
+            },
+            child: const Text("Already have an account? Log In", style: TextStyle(color: Colors.grey)),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -224,18 +228,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Step 2
   Widget _buildAvatarStep() {
     final selectedAvatar = ref.watch(onboardingStateProvider).avatarUrl;
-    final avatars = [
-      'assets/images/avatar_1.png', // Mock paths, typically would be local assets or selection IDs
-      'assets/images/avatar_2.png',
-      'assets/images/avatar_3.png',
-      'assets/images/avatar_4.png',
+
+    // Premium unsplash images
+    final premiumAvatars = [
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&h=400', // Male 1
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&h=400', // Female 1
+      'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=400&h=400', // Male 2
+      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&h=400', // Female 2
     ];
 
-    // Since we don't have actual images, let's use colors/icons for MVP
-    final avatarColors = [Colors.blue, Colors.red, Colors.green, Colors.purple];
+    ImageProvider? getAvatarImage(String? url) {
+      if (url == null) return null;
+      if (url.startsWith('http')) {
+        return NetworkImage(url);
+      } else {
+        return FileImage(File(url));
+      }
+    }
+
+    Future<void> pickImage() async {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        ref.read(onboardingStateProvider.notifier).setAvatar(pickedFile.path);
+      }
+    }
 
     return Padding(
-      padding: const EdgeInsets.all(32.0),
+      padding: const EdgeInsets.all(24.0),
       child: Column(
         children: [
            const Text(
@@ -244,11 +264,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            "How do you want to appear to your squad?",
+            "Pick a pro avatar or upload your own.",
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 30),
+          
           Expanded(
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -256,37 +277,85 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
               ),
-              itemCount: avatarColors.length,
+              itemCount: premiumAvatars.length + 1, // +1 for Upload
               itemBuilder: (context, index) {
-                final color = avatarColors[index];
-                // Simple ID generation for now: 'color_int'
-                final id = 'avatar_${index + 1}'; 
-                final isSelected = selectedAvatar == id;
+                if (index == premiumAvatars.length) {
+                  // Upload Button
+                  return GestureDetector(
+                    onTap: pickImage,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.3), width: 2),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.cloud_upload_outlined, size: 32, color: AppColors.primary),
+                          const SizedBox(height: 8),
+                          Text("Upload", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final url = premiumAvatars[index];
+                final isSelected = selectedAvatar == url;
 
                 return GestureDetector(
                   onTap: () {
-                    ref.read(onboardingStateProvider.notifier).setAvatar(id);
+                    ref.read(onboardingStateProvider.notifier).setAvatar(url);
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.2),
+                      color: Colors.grey[800],
                       shape: BoxShape.circle,
-                      border: isSelected ? Border.all(color: AppColors.primary, width: 4) : null,
+                      border: isSelected ? Border.all(color: AppColors.primary, width: 4) : Border.all(color: Colors.transparent, width: 2),
+                      image: DecorationImage(
+                        image: getAvatarImage(url)!,
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    child: Center(
-                      child: Icon(Icons.person, size: 48, color: color),
-                    ),
+                    child: isSelected 
+                      ? const Align(
+                          alignment: Alignment.topRight, 
+                          child: CircleAvatar(
+                            radius: 12, 
+                            backgroundColor: AppColors.primary, 
+                            child: Icon(Icons.check, size: 16, color: Colors.black),
+                          ),
+                        )
+                      : null,
                   ),
                 );
               },
             ),
           ),
-          const SizedBox(height: 20),
+          
+          // Show selected preview if it's a file (custom upload)
+          if (selectedAvatar != null && !selectedAvatar.startsWith('http'))
+             Padding(
+               padding: const EdgeInsets.only(bottom: 20.0),
+               child: Row(
+                 mainAxisAlignment: MainAxisAlignment.center,
+                 children: [
+                   const Text("Selected: Custom Upload", style: TextStyle(fontWeight: FontWeight.bold)),
+                   const SizedBox(width: 8),
+                   CircleAvatar(
+                     radius: 20,
+                     backgroundImage: FileImage(File(selectedAvatar)),
+                   ),
+                 ],
+               ),
+             ),
+
           ElevatedButton(
             onPressed: () {
               // Default to first if none selected, or force selection
               if (selectedAvatar == null) {
-                 ref.read(onboardingStateProvider.notifier).setAvatar('avatar_1');
+                 ref.read(onboardingStateProvider.notifier).setAvatar(premiumAvatars[0]);
               }
               _nextPage();
             },
@@ -330,7 +399,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             ),
             onChanged: (val) {
-              ref.read(onboardingStateProvider.notifier).setJournalEntry(val);
+              // TODO: Add setJournalEntry method or remove this feature
+              // ref.read(onboardingStateProvider.notifier).setJournalEntry(val);
             },
           ),
            const SizedBox(height: 40),
@@ -407,7 +477,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Center(
             child: TextButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                context.push('/login');
               }, 
               child: Text("Already have an account? Log In", style: TextStyle(color: Colors.grey[600])),
             ),

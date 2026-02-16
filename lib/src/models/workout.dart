@@ -1,73 +1,37 @@
-import 'package:hive/hive.dart';
-
-part 'workout.g.dart';
-
 /// Difficulty levels for workouts
-@HiveType(typeId: 13)
 enum WorkoutLevel {
-  @HiveField(0)
   beginner,
-  @HiveField(1)
   intermediate,
-  @HiveField(2)
   advanced,
 }
 
 /// Equipment requirements
-@HiveType(typeId: 14)
 enum Equipment {
-  @HiveField(0)
   none,
-  @HiveField(1)
   dumbbells,
-  @HiveField(2)
   resistanceBands,
-  @HiveField(3)
   gym,
 }
 
 /// Workout categories
-@HiveType(typeId: 15)
 enum WorkoutCategory {
-  @HiveField(0)
   fullBody,
-  @HiveField(1)
   upper,
-  @HiveField(2)
   lower,
-  @HiveField(3)
   core,
-  @HiveField(4)
   hiit,
-  @HiveField(5)
   mobility,
-  @HiveField(6)
   challenge,
-  @HiveField(7)
   lowImpact, // Knee-friendly, seated, floor exercises
 }
 
-@HiveType(typeId: 10)
 class Exercise {
-  @HiveField(0)
   final String name;
-  
-  @HiveField(1)
   final int durationSeconds; // 0 if rep-based
-  
-  @HiveField(2)
   final int reps; // 0 if duration-based
-  
-  @HiveField(3)
   final String instructions;
-
-  @HiveField(4)
   final String? imageUrl;
-  
-  @HiveField(5)
   final String? lottieUrl;
-
-  @HiveField(6)
   final bool isLowImpact; // True = no jumping, minimal knee stress
 
   const Exercise({
@@ -81,45 +45,19 @@ class Exercise {
   });
 }
 
-@HiveType(typeId: 11)
 class Workout {
-  @HiveField(0)
   final String id;
-  
-  @HiveField(1)
   final String title;
-  
-  @HiveField(2)
   final String description;
-  
-  @HiveField(3)
   final List<Exercise> exercises;
-  
-  @HiveField(4)
   final String category; // Legacy - keep for compatibility
-  
-  @HiveField(5)
   final String? imageUrl;
-
-  @HiveField(6)
   final WorkoutLevel level;
-
-  @HiveField(7)
   final int durationMinutes;
-
-  @HiveField(8)
   final Equipment equipment;
-
-  @HiveField(9)
   final WorkoutCategory workoutCategory;
-
-  @HiveField(10)
   final int unlockRequirement; // Number of completions needed to unlock (0 = always unlocked)
-
-  @HiveField(11)
   final String? unlockWorkoutId; // If set, must complete this workout X times to unlock
-
-  @HiveField(12)
   final bool isChallenge;
 
   const Workout({
@@ -181,18 +119,10 @@ class Workout {
   bool get isCustom => id.length > 10; // UUIDs are 36 chars, built-in IDs are short (e.g., "B1")
 }
 
-@HiveType(typeId: 12)
 class WorkoutSession {
-  @HiveField(0)
   final String workoutId;
-  
-  @HiveField(1)
   final DateTime completedAt;
-  
-  @HiveField(2)
   final int totalDurationSeconds;
-  
-  @HiveField(3)
   final String notes;
 
   const WorkoutSession({

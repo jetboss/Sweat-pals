@@ -1,72 +1,64 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
-import 'package:uuid/uuid.dart';
-import '../../models/progress_photo.dart';
-import '../../utils/constants.dart';
+import 'package:drift/drift.dart' as drift;
+import '../../database/app_database.dart';
+import '../../models/progress_photo.dart' as models;
+import '../../../main.dart';
 
-final photosProvider = StateNotifierProvider<PhotosNotifier, List<ProgressPhoto>>((ref) {
-  return PhotosNotifier();
-});
-
-class PhotosNotifier extends StateNotifier<List<ProgressPhoto>> {
-  PhotosNotifier() : super([]) {
-    _loadEntries();
+class PhotosNotifier extends Notifier<List<models.ProgressPhoto>> {
+  @override
+  List<models.ProgressPhoto> build() {
+    loadPhotos();
+    return [];
   }
 
-  late Box<ProgressPhoto> _box;
-  final ImagePicker _picker = ImagePicker();
-
-  void _loadEntries() {
-    _box = Hive.box<ProgressPhoto>(AppConstants.progressPhotosBox);
-    state = _box.values.toList()..sort((a, b) => b.date.compareTo(a.date));
-  }
-
-  Future<void> pickAndAddPhoto(ImageSource source) async {
+  Future<void> loadPhotos() async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: 1000,
-        imageQuality: 85,
-      );
-
-      if (image == null) return;
-
-      // Save to permanent location
-      final directory = await getApplicationDocumentsDirectory();
-      final String fileName = 'progress_${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}';
-      final String permanentPath = path.join(directory.path, fileName);
+      final db = ref.read(appDatabaseProvider);
+      final results = await (db.select(db.progressPhotosTable)
+        ..orderBy([(t) => drift.OrderingTerm.desc(t.date)])).get();
       
-      await File(image.path).copy(permanentPath);
-
-      final photo = ProgressPhoto(
-        id: const Uuid().v4(),
-        date: DateTime.now(),
-        imagePath: permanentPath,
-        notes: '',
-      );
-
-      await _box.put(photo.id, photo);
-      state = [photo, ...state]..sort((a, b) => b.date.compareTo(a.date));
+      state = results.map((row) => models.ProgressPhoto(
+        id: row.id,
+        date: row.date,
+        imagePath: row.imagePath,
+        weight: row.weight,
+        notes: row.notes,
+      )).toList();
     } catch (e) {
-      debugPrint('Error picking/saving photo: $e');
+      print("Error loading photos: $e");
     }
   }
 
-  Future<void> deletePhoto(ProgressPhoto photo) async {
+  Future<void> addPhoto(models.ProgressPhoto photo) async {
     try {
-      await _box.delete(photo.id);
-      final file = File(photo.imagePath);
-      if (await file.exists()) {
-        await file.delete();
-      }
-      state = state.where((p) => p.id != photo.id).toList();
+      final db = ref.read(appDatabaseProvider);
+      await db.into(db.progressPhotosTable).insert(
+        ProgressPhotosTableCompanion.insert(
+          id: photo.id,
+          userId: 'current_user', // TODO: Get from user provider
+          date: photo.date,
+          imagePath: photo.imagePath,
+          weight: drift.Value(photo.weight),
+          notes: drift.Value(photo.notes),
+        ),
+      );
+      state = [...state, photo];
     } catch (e) {
-      debugPrint('Error deleting photo: $e');
+      print("Error adding photo: $e");
+    }
+  }
+
+  Future<void> deletePhoto(String photoId) async {
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await (db.delete(db.progressPhotosTable)..where((t) => t.id.equals(photoId))).go();
+      state = state.where((p) => p.id != photoId).toList();
+    } catch (e) {
+      print("Error deleting photo: $e");
     }
   }
 }
+
+final photosProvider = NotifierProvider<PhotosNotifier, List<models.ProgressPhoto>>(() {
+  return PhotosNotifier();
+});

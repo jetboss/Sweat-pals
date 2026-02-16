@@ -1,23 +1,8 @@
-import 'package:hive/hive.dart';
-
-part 'scheduled_workout.g.dart';
-
-/// A workout scheduled for a specific date
-@HiveType(typeId: 17)
 class ScheduledWorkout {
-  @HiveField(0)
   final String id;
-
-  @HiveField(1)
   final String workoutId;
-
-  @HiveField(2)
   final DateTime scheduledDate;
-
-  @HiveField(3)
   final bool isCompleted;
-
-  @HiveField(4)
   final DateTime? completedAt;
 
   const ScheduledWorkout({

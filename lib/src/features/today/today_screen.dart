@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../../providers/user_provider.dart';
-import '../../providers/workout_calendar_provider.dart';
 import '../../theme/app_colors.dart';
-import '../../utils/page_routes.dart';
 import '../tracking/tracking_provider.dart';
 import '../tracking/tracking_screen.dart';
-import '../workouts/workout_timer_screen.dart';
-import '../journal/journal_provider.dart';
 import '../journal/morning_prompt_screen.dart';
-import '../journal/journal_screen.dart';
 import '../review/progress_timeline_screen.dart';
 import '../../providers/partnership_provider.dart';
 import '../../providers/health_provider.dart';
@@ -20,15 +15,14 @@ import '../../services/database_service.dart';
 import '../../models/squad.dart';
 import '../squads/squad_screen.dart';
 import '../partnership/find_partner_screen.dart';
-import '../../widgets/animated_streak_counter.dart';
 import '../pacts/pacts_screen.dart';
 
 final partnerLogsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, userId) {
-  return DatabaseService().streamPartnerLogs(userId);
+  return ref.watch(databaseServiceProvider).streamPartnerLogs(userId);
 });
 
 final notificationStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
-  return DatabaseService().streamNotifications();
+  return ref.watch(databaseServiceProvider).streamNotifications();
 });
 
 
@@ -74,7 +68,7 @@ class TodayScreen extends ConsumerWidget {
   Widget _buildStreakCard(BuildContext context, WidgetRef ref) {
     final streak = ref.watch(trackingProvider.notifier).calculateStreak();
     final user = ref.read(userProvider);
-    final tokens = user?.restTokens ?? 0;
+    final tokens = user.value?.restTokens ?? 0;
     
     // Check if frozen today or completed
     // Note: This logic could be moved to provider but doing here for MVP
@@ -92,15 +86,12 @@ class TodayScreen extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => TrackingScreen()),
-        );
+        context.push('/today/tracking');
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [AppColors.primary, AppColors.primaryVariant],
           ),
           borderRadius: BorderRadius.circular(16),
@@ -149,8 +140,8 @@ class TodayScreen extends ConsumerWidget {
                       title: const Text('Freeze Streak? ❄️'),
                       content: Text('Use 1 Rest Token to keep your streak alive today?\nYou have $tokens tokens left.'),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Freeze')),
+                        TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
+                        TextButton(onPressed: () => context.pop(true), child: const Text('Freeze')),
                       ],
                     ),
                   );
@@ -176,7 +167,7 @@ class TodayScreen extends ConsumerWidget {
 
   Widget _buildSquadStatusCard(BuildContext context, WidgetRef ref) {
     return StreamBuilder<Map<String, dynamic>?>(
-      stream: DatabaseService().streamMySquad(),
+      stream: ref.watch(databaseServiceProvider).streamMySquad(),
       builder: (context, snapshot) {
         final squadData = snapshot.data;
         
@@ -191,7 +182,7 @@ class TodayScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                Icon(Icons.groups_3_rounded, size: 48, color: AppColors.textSecondary),
+                const Icon(Icons.groups_3_rounded, size: 48, color: AppColors.textSecondary),
                 const SizedBox(height: 12),
                 const Text(
                   "Flying Solo?",
@@ -206,7 +197,7 @@ class TodayScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SquadScreen()));
+                    context.push('/squad');
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -223,9 +214,9 @@ class TodayScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const FindPartnerScreen()));
+                    context.push('/today/find-partner');
                   },
-                  child: Text(
+                  child: const Text(
                     "Or find a 1:1 Partner",
                     style: TextStyle(
                       color: AppColors.primary,
@@ -244,7 +235,7 @@ class TodayScreen extends ConsumerWidget {
 
         return GestureDetector(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const SquadScreen()));
+            context.push('/squad');
           },
           child: Container(
             width: double.infinity,
@@ -253,14 +244,14 @@ class TodayScreen extends ConsumerWidget {
               gradient: LinearGradient(
                 colors: isWolf 
                   ? [AppColors.primaryVariant, AppColors.primary] 
-                  : [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                  : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
+                  color: AppColors.primary.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 8),
                 ),
@@ -318,7 +309,7 @@ class TodayScreen extends ConsumerWidget {
           icon: Icons.sunny,
           label: "Morning Journal",
           isComplete: false,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MorningPromptScreen())), // Simplified nav
+          onTap: () => context.push('/today/morning-prompt'), // Simplified nav
         ),
         _ChecklistItem(
           icon: Icons.fitness_center, 
@@ -423,7 +414,7 @@ class TodayScreen extends ConsumerWidget {
                 icon: Icons.timeline_rounded,
                 label: 'View Progress',
                 color: AppColors.primary,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgressTimelineScreen())),
+                onTap: () => context.push('/today/timeline'),
               ),
             ),
               Expanded(
@@ -444,7 +435,7 @@ class TodayScreen extends ConsumerWidget {
                   icon: Icons.handshake_rounded,
                   label: 'Social Contracts',
                   color: Colors.orange,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PactsScreen())),
+                  onTap: () => context.go('/pacts'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -489,7 +480,7 @@ class TodayScreen extends ConsumerWidget {
   }
 
   Future<void> _sendVibe(BuildContext context, WidgetRef ref, String type) async {
-    Navigator.pop(context); // Close sheet
+    context.pop(); // Close sheet
     HapticFeedback.mediumImpact();
 
     final partnership = ref.read(activePartnershipProvider);
@@ -500,7 +491,7 @@ class TodayScreen extends ConsumerWidget {
       final partnerId = myId == p1 ? p2 : p1;
 
       try {
-        await DatabaseService().sendNudge(partnerId, type: type);
+        await ref.read(databaseServiceProvider).sendNudge(partnerId, type: type);
         if (context.mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -541,7 +532,7 @@ class _VibeOption extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Text(emoji, style: const TextStyle(fontSize: 32)),
@@ -568,7 +559,7 @@ class _IncomingNudgeListenerState extends ConsumerState<_IncomingNudgeListener> 
 
   @override
   Widget build(BuildContext context) {
-    final notificationsAsync = ref.watch(notificationStreamProvider);
+    ref.watch(notificationStreamProvider);
 
     ref.listen(notificationStreamProvider, (previous, next) {
       if (next.hasValue && next.value!.isNotEmpty) {
@@ -698,37 +689,7 @@ class _ActivityStat extends StatelessWidget {
   }
 }
 
-class _QuickStatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color? color;
 
-  const _QuickStatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? AppColors.primary;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: c, size: 28),
-            const SizedBox(height: 8),
-            Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: c)),
-            Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _QuickActionButton extends StatelessWidget {
   final IconData icon;

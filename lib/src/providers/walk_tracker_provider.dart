@@ -19,10 +19,14 @@ final isTrackingProvider = Provider<bool>((ref) {
 });
 
 /// State notifier for walk tracking control
-class WalkTrackerNotifier extends StateNotifier<WalkTrackerState> {
-  final WalkTrackerService _tracker;
+class WalkTrackerNotifier extends Notifier<WalkTrackerState> {
+  late final WalkTrackerService _tracker;
   
-  WalkTrackerNotifier(this._tracker) : super(WalkTrackerState.idle());
+  @override
+  WalkTrackerState build() {
+    _tracker = ref.read(walkTrackerServiceProvider);
+    return WalkTrackerState.idle();
+  }
   
   /// Start a new walk
   Future<void> startWalk() async {
@@ -99,6 +103,4 @@ enum WalkTrackerStatus {
 }
 
 /// Provider for walk tracker control
-final walkTrackerProvider = StateNotifierProvider<WalkTrackerNotifier, WalkTrackerState>((ref) {
-  return WalkTrackerNotifier(WalkTrackerService.instance);
-});
+final walkTrackerProvider = NotifierProvider<WalkTrackerNotifier, WalkTrackerState>(WalkTrackerNotifier.new);

@@ -69,7 +69,7 @@ class WalkTrackerService {
     // Get initial position
     try {
       final initialPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       
       _lastPosition = initialPosition;

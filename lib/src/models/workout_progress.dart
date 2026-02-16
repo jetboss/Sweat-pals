@@ -1,26 +1,10 @@
-import 'package:hive/hive.dart';
-
-part 'workout_progress.g.dart';
-
 /// Tracks user's workout completion progress and unlocks
-@HiveType(typeId: 16)
 class WorkoutProgress {
-  @HiveField(0)
   final Map<String, int> completionCounts; // workoutId -> times completed
-
-  @HiveField(1)
   final List<String> unlockedWorkoutIds;
-
-  @HiveField(2)
   final DateTime? lastWorkoutDate;
-
-  @HiveField(3)
   final int currentStreak;
-
-  @HiveField(4)
   final int longestStreak;
-
-  @HiveField(5)
   final int totalWorkoutsCompleted;
 
   const WorkoutProgress({

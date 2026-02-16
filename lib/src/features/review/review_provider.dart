@@ -1,57 +1,70 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../../models/weekly_review.dart';
-import '../../utils/constants.dart';
+import 'package:drift/drift.dart' as drift;
+import '../../database/app_database.dart';
+import '../../models/weekly_review.dart' as models;
+import '../../../main.dart';
 
-final reviewProvider = StateNotifierProvider<ReviewNotifier, List<WeeklyReview>>((ref) {
-  return ReviewNotifier();
-});
-
-class ReviewNotifier extends StateNotifier<List<WeeklyReview>> {
-  ReviewNotifier() : super([]) {
-    _loadEntries();
+class ReviewNotifier extends Notifier<List<models.WeeklyReview>> {
+  @override
+  List<models.WeeklyReview> build() {
+    _loadReviews();
+    return [];
   }
 
-  late Box<WeeklyReview> _box;
-
-  void _loadEntries() {
+  Future<void> _loadReviews() async {
     try {
-      _box = Hive.box<WeeklyReview>(AppConstants.weeklyReviewBox);
-      state = _box.values.toList()..sort((a, b) => b.date.compareTo(a.date));
+      final db = ref.read(appDatabaseProvider);
+      final results = await (db.select(db.weeklyReviewsTable)
+        ..orderBy([(t) => drift.OrderingTerm.desc(t.date)])).get();
+      
+      state = results.map((row) => models.WeeklyReview(
+        id: row.id,
+        date: row.date,
+        weight: row.weight,
+        waist: row.waist,
+        consistencyScore: row.consistencyScore,
+        notes: row.notes,
+      )).toList();
     } catch (e) {
-      debugPrint('Error loading weekly reviews: $e');
-      state = [];
+      print("Error loading reviews: $e");
     }
   }
 
-  Future<void> addEntry(WeeklyReview entry) async {
+  Future<void> addReview(models.WeeklyReview review) async {
     try {
-      await _box.put(entry.id, entry);
-      state = [entry, ...state]..sort((a, b) => b.date.compareTo(a.date));
+      final db = ref.read(appDatabaseProvider);
+      await db.into(db.weeklyReviewsTable).insert(
+        WeeklyReviewsTableCompanion.insert(
+          id: review.id,
+          userId: 'current_user', // TODO: Get from user provider
+          date: review.date,
+          weight: review.weight,
+          waist: review.waist,
+          consistencyScore: review.consistencyScore,
+          notes: drift.Value(review.notes),
+        ),
+      );
+      state = [review, ...state];
     } catch (e) {
-      debugPrint('Error adding weekly review: $e');
+      print("Error adding review: $e");
     }
   }
 
-  String getSuggestion(WeeklyReview current) {
-    if (state.length < 2) return "Great start! Keep tracking to see trends.";
+  // Alias for addEntry to match weekly_review_form usage  
+  Future<void> addEntry(models.WeeklyReview review) => addReview(review);
 
-    final previous = state[1]; // Since it's sorted b.date.compareTo(a.date)
-    final weightDiff = current.weight - previous.weight;
-    
-    if (current.consistencyScore < 7) {
-      return "Focus on consistency this week, pal. Small wins add up!";
-    }
-
-    if (weightDiff > 0.5) {
-      return "Weight is up slightly. Let's tighten up the meal plan portion sizes.";
-    } else if (weightDiff < -1.0) {
-      return "Fast progress! Make sure you're eating enough protein, pal.";
-    } else if (weightDiff <= 0 && weightDiff >= -0.5) {
-      return "Steady progress. Let's add 15 mins of walking to boost results!";
+  // Generate a suggestion based on review data
+  String getSuggestion(models.WeeklyReview review) {
+    if (review.consistencyScore >= 8) {
+      return "You're crushing it! 🔥 Keep up the amazing work!";
+    } else if (review.consistencyScore >= 5) {
+      return "Good job this week! Let's aim for even more consistency next week! 💪";
     } else {
-      return "You're on the right track! Keep doing what you're doing.";
+      return "Every week is a fresh start! Let's get back on track together! 🚀";
     }
   }
 }
+
+final reviewProvider = NotifierProvider<ReviewNotifier, List<models.WeeklyReview>>(() {
+  return ReviewNotifier();
+});

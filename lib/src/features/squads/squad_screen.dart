@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_colors.dart';
 import '../../services/database_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/squad.dart';
 import 'create_squad_screen.dart';
 
-class SquadScreen extends StatefulWidget {
+class SquadScreen extends ConsumerStatefulWidget {
   const SquadScreen({super.key});
 
   @override
-  State<SquadScreen> createState() => _SquadScreenState();
+  ConsumerState<SquadScreen> createState() => _SquadScreenState();
 }
 
-class _SquadScreenState extends State<SquadScreen> {
-  final _db = DatabaseService();
+class _SquadScreenState extends ConsumerState<SquadScreen> {
+
 
   @override
   Widget build(BuildContext context) {
+    final db = ref.watch(databaseServiceProvider);
+    
     return Scaffold(
       body: StreamBuilder<Map<String, dynamic>?>(
-        stream: _db.streamMySquad(),
+        stream: db.streamMySquad(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -36,10 +40,10 @@ class _SquadScreenState extends State<SquadScreen> {
           
           // Initialize presence for this squad
           // This might be called multiple times, DatabaseService handles cleanup
-          _db.initializePresence(squad.id);
+          db.initializePresence(squad.id);
 
           return ValueListenableBuilder<Map<String, Map<String, dynamic>>>(
-            valueListenable: _db.presenceState,
+            valueListenable: db.presenceState,
             builder: (context, presenceMap, child) {
               return _buildSquadDashboard(context, squad, presenceMap);
             },
@@ -56,14 +60,14 @@ class _SquadScreenState extends State<SquadScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.groups_3_rounded, size: 80, color: AppColors.textSecondary),
+            const Icon(Icons.groups_3_rounded, size: 80, color: AppColors.textSecondary),
             const SizedBox(height: 24),
             const Text(
               "Flying Solo",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               "Fitness is better with a Pack.\nJoin a squad or start your own.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
@@ -76,10 +80,7 @@ class _SquadScreenState extends State<SquadScreen> {
               height: 56,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CreateSquadScreen()),
-                  );
+                  context.push('/squad/create');
                 },
                 child: const Text("Create a Squad"),
               ),
@@ -134,9 +135,9 @@ class _SquadScreenState extends State<SquadScreen> {
                height: 50,
                child: ElevatedButton(
                  onPressed: () async {
-                   final success = await _db.joinSquad(codeController.text.trim());
-                   Navigator.pop(ctx);
-                   if (!success) {
+                   final success = await ref.read(databaseServiceProvider).joinSquad(codeController.text.trim());
+                   if (ctx.mounted) ctx.pop();
+                   if (!success && context.mounted) {
                      ScaffoldMessenger.of(context).showSnackBar(
                        const SnackBar(content: Text("Invalid code or already in squad.")),
                      );
@@ -218,7 +219,7 @@ class _SquadScreenState extends State<SquadScreen> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: squad.inviteCode));
-                  Navigator.pop(ctx);
+                  ctx.pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text("Invite code copied! 📋"),
@@ -237,7 +238,7 @@ class _SquadScreenState extends State<SquadScreen> {
               height: 56,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.pop(ctx);
+                  context.pop();
                   // Could integrate with share_plus package for native sharing
                   Clipboard.setData(ClipboardData(
                     text: "Join my Sweat Pals squad '${squad.name}'! Use code: ${squad.inviteCode}",
@@ -293,7 +294,7 @@ class _SquadScreenState extends State<SquadScreen> {
         SliverPadding(
           padding: const EdgeInsets.all(16),
           sliver: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _db.streamSquadMembers(squad.id),
+            stream: ref.watch(databaseServiceProvider).streamSquadMembers(squad.id),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const SliverToBoxAdapter(child: LinearProgressIndicator());
               
@@ -326,13 +327,12 @@ class _SquadScreenState extends State<SquadScreen> {
 
         // Chat Teaser
         StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _db.streamSquadMembers(squad.id),
+          stream: ref.watch(databaseServiceProvider).streamSquadMembers(squad.id),
           builder: (context, membersSnapshot) {
             if (!membersSnapshot.hasData) return const SliverToBoxAdapter(child: SizedBox.shrink());
             
             final members = membersSnapshot.data!;
             final ghostCount = members.where((m) => m['status'] == 'ghost').length;
-            final totalMembers = members.length;
             
             // Only show locked message for Wolf Pack tier
             if (!squad.isWolfPack || ghostCount == 0) {
@@ -349,14 +349,14 @@ class _SquadScreenState extends State<SquadScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.1),
+                        color: AppColors.success.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
                       ),
-                      child: Row(
+                      child: const Row(
                         children: [
                           Icon(Icons.chat_bubble_rounded, color: AppColors.success),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               "Chat is unlocked! Tap to start.",
@@ -383,14 +383,14 @@ class _SquadScreenState extends State<SquadScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.lock_rounded, color: AppColors.textSecondary),
+                      const Icon(Icons.lock_rounded, color: AppColors.textSecondary),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           ghostCount == 1
                             ? "Chat locked. 1 ghost hasn't paid rent."
                             : "Chat locked. $ghostCount ghosts haven't paid rent.",
-                          style: TextStyle(color: AppColors.textSecondary),
+                          style: const TextStyle(color: AppColors.textSecondary),
                         ),
                       ),
                     ],
@@ -405,7 +405,7 @@ class _SquadScreenState extends State<SquadScreen> {
   }
 }
 
-class _SquadMemberTile extends StatelessWidget {
+class _SquadMemberTile extends ConsumerWidget {
   final Map<String, dynamic> member;
   final bool isWolfPack;
   final Map<String, dynamic>? presence; // e.g. {'status': 'online'}
@@ -413,13 +413,14 @@ class _SquadMemberTile extends StatelessWidget {
   const _SquadMemberTile({required this.member, required this.isWolfPack, this.presence});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = member['status']; // 'active', 'ghost'
     final isActive = status == 'active';
     final userId = member['user_id'];
+    final db = ref.read(databaseServiceProvider);
 
     return FutureBuilder<Map<String, dynamic>?>(
-      future: DatabaseService().getProfile(userId),
+      future: db.getProfile(userId),
       builder: (context, snapshot) {
         final profile = snapshot.data;
         // Fall back to email prefix or 'Pal' if no name
@@ -430,7 +431,7 @@ class _SquadMemberTile extends StatelessWidget {
         }
         
         return FutureBuilder<int>(
-          future: DatabaseService().getWeeklyWorkoutCount(userId),
+          future: db.getWeeklyWorkoutCount(userId),
           builder: (context, workoutSnapshot) {
             final workoutCount = workoutSnapshot.data ?? 0;
             
@@ -445,18 +446,22 @@ class _SquadMemberTile extends StatelessWidget {
                 }
                 
                 try {
-                  await DatabaseService().sendNudge(userId);
+                  await db.sendNudge(userId);
                   HapticFeedback.mediumImpact();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Nudged $name! 👆'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Nudged $name! 👆'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Could not nudge: $e')),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not nudge: $e')),
+                    );
+                  }
                 }
               },
               child: Stack(
@@ -471,7 +476,7 @@ class _SquadMemberTile extends StatelessWidget {
                     ),
                     boxShadow: isActive ? [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.2),
+                        color: AppColors.primary.withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       )
@@ -511,7 +516,7 @@ class _SquadMemberTile extends StatelessWidget {
                                 BoxShadow(
                                   color: (presence!['status'] == 'working_out' 
                                       ? Colors.purpleAccent 
-                                      : Colors.green).withOpacity(0.5),
+                                      : Colors.green).withValues(alpha: 0.5),
                                   blurRadius: 6,
                                 ),
                               ],
@@ -536,11 +541,11 @@ class _SquadMemberTile extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.fitness_center, size: 12, color: AppColors.primary),
+                          const Icon(Icons.fitness_center, size: 12, color: AppColors.primary),
                           const SizedBox(width: 2),
                           Text(
                             '$workoutCount this week',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 10,
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,

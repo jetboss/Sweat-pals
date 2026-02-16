@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_colors.dart';
-import '../../services/database_service.dart';
-import '../../models/user_profile.dart'; // Using UserProfile model or just Map
+import '../../services/partnership_service.dart';
 import '../../providers/user_provider.dart';
-import '../profile/profile_screen.dart'; // Nav to profile if needed
 
 class FindPartnerScreen extends ConsumerStatefulWidget {
   const FindPartnerScreen({super.key});
@@ -14,44 +13,48 @@ class FindPartnerScreen extends ConsumerStatefulWidget {
 }
 
 class _FindPartnerScreenState extends ConsumerState<FindPartnerScreen> {
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _matches = [];
-  String? _error;
+  final _inviteCodeController = TextEditingController();
+  bool _isLoading = false;
+  String? _statusMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadMatches();
-  }
+  Future<void> _connectWithPartner() async {
+    final code = _inviteCodeController.text.trim().toUpperCase();
+    if (code.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid 6-character code.')),
+      );
+      return;
+    }
 
-  Future<void> _loadMatches() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _statusMessage = null;
     });
 
     try {
-      final matches = await DatabaseService().findMatches();
+      await PartnershipService().matchWithPartner(code);
       if (mounted) {
         setState(() {
-          _matches = matches;
-          _isLoading = false;
+          _statusMessage = 'Success! You are now partners! 🎉';
+          _inviteCodeController.clear();
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Partner linked successfully!')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _error = 'Failed to find matches. Please try again.';
-          _isLoading = false;
-        });
+        setState(() => _statusMessage = 'Error: ${e.toString().replaceAll("Exception:", "")}');
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
-    final hasPreferences = user?.preferredWorkoutHour != null;
+    final myCode = user.value?.inviteCode ?? 'LOADING';
 
     return Scaffold(
       appBar: AppBar(
@@ -59,192 +62,125 @@ class _FindPartnerScreenState extends ConsumerState<FindPartnerScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: !hasPreferences 
-          ? _buildEmptyStateNoPreferences(context)
-          : _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? Center(child: Text(_error!))
-                  : _matches.isEmpty
-                      ? _buildEmptyStateNoMatches(context)
-                      : _buildMatchList(),
-    );
-  }
-
-  Widget _buildEmptyStateNoPreferences(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.access_time_filled, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              "Set Your Schedule",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "To find a workout partner, we need to know when you usually exercise.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              ),
-              child: const Text("Update Profile"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyStateNoMatches(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.person_search, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              "No Matches Yet",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "We couldn't find anyone with a similar schedule right now. Try adjusting your time or checking back later.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton(
-               onPressed: _loadMatches,
-               child: const Text("Refresh"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMatchList() {
-    return RefreshIndicator(
-      onRefresh: _loadMatches,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _matches.length,
-        itemBuilder: (context, index) {
-          final match = _matches[index];
-          return _MatchCard(match: match);
-        },
-      ),
-    );
-  }
-}
-
-class _MatchCard extends StatelessWidget {
-  final Map<String, dynamic> match;
-
-  const _MatchCard({required this.match});
-
-  @override
-  Widget build(BuildContext context) {
-    final name = match['name'] ?? 'Unknown User';
-    final bio = match['bio'] ?? 'No bio yet.';
-    final hour = match['preferred_workout_hour'] as int?;
-    final level = match['fitness_level'] as String? ?? 'Beginner';
-    final matchScore = match['match_score'] as int? ?? 0;
-    final avatarUrl = match['avatar_url'] as String?;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                  child: avatarUrl == null ? Text(name[0].toUpperCase()) : null,
+            // Your Code Section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(level.toUpperCase(), style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                    ],
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 8),
                   ),
-                ),
-                Container(
-                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                   decoration: BoxDecoration(
-                     color: Colors.green.withOpacity(0.1),
-                     borderRadius: BorderRadius.circular(8),
-                   ),
-                   child: Row(
-                     children: [
-                       const Icon(Icons.bolt, size: 14, color: Colors.green),
-                       Text("$matchScore% Match", style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
-                     ],
-                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (hour != null)
-              Row(
-                children: [
-                  const Icon(Icons.access_time, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 4),
-                  Text("Works out around ${_formatHour(hour)}", style: const TextStyle(fontSize: 14)),
                 ],
               ),
-            const SizedBox(height: 8),
-            Text(bio, style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic)),
+              child: Column(
+                children: [
+                  const Text("YOUR INVITE CODE", 
+                    style: TextStyle(color: Colors.white70, letterSpacing: 1.5, fontSize: 12, fontWeight: FontWeight.bold)
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: myCode));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied! 📋')));
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                         Text(
+                          myCode,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.copy, color: Colors.white70, size: 20),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text("Share this with your gym buddy to link up!", style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 32),
+
+            // Enter Code Section
+            const Text("ENTER A FRIEND'S CODE", 
+               style: TextStyle(color: Colors.grey, letterSpacing: 1.5, fontSize: 12, fontWeight: FontWeight.bold)
+            ),
             const SizedBox(height: 16),
+            TextField(
+              controller: _inviteCodeController,
+              textAlign: TextAlign.center,
+              textCapitalization: TextCapitalization.characters,
+              maxLength: 6,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 4),
+              decoration: InputDecoration(
+                hintText: 'XYZ123',
+                counterText: '',
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 20),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            if (_statusMessage != null)
+              Container(
+                 padding: const EdgeInsets.all(12),
+                 margin: const EdgeInsets.only(bottom: 16),
+                 decoration: BoxDecoration(
+                   color: _statusMessage!.startsWith('Success') ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                   borderRadius: BorderRadius.circular(12),
+                 ),
+                 child: Text(_statusMessage!, 
+                   style: TextStyle(color: _statusMessage!.startsWith('Success') ? Colors.green : Colors.red, fontWeight: FontWeight.bold)
+                 ),
+              ),
+
             SizedBox(
               width: double.infinity,
+              height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                   // TODO: Implement invitation logic (just mock for now)
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     const SnackBar(content: Text('Invitation sent! 📨')),
-                   );
-                },
+                onPressed: _isLoading ? null : _connectWithPartner,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
                 ),
-                child: const Text("Connect"),
+                child: _isLoading 
+                  ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                  : const Text("LINK PARTNER", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  String _formatHour(int hour) {
-    if (hour == 0) return '12 AM';
-    if (hour == 12) return '12 PM';
-    return hour > 12 ? '${hour - 12} PM' : '$hour AM';
   }
 }

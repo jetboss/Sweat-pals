@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,7 +9,7 @@ import '../../providers/workouts_provider.dart';
 import '../../providers/workout_calendar_provider.dart';
 import '../../providers/workout_progress_provider.dart';
 import '../../theme/app_colors.dart';
-import '../../utils/page_routes.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/animated_widgets.dart';
 import 'workout_timer_screen.dart';
 
@@ -57,13 +58,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
     });
   }
 
-  void _goToThisWeek() {
-    final now = DateTime.now();
-    setState(() {
-      _weekStart = now.subtract(Duration(days: now.weekday - 1));
-      _currentMonth = DateTime(now.year, now.month, 1);
-    });
-  }
+
 
   void _toggleView() {
     setState(() {
@@ -159,7 +154,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               if (isCurrentMonth)
-                Text(
+                const Text(
                   'This Month',
                   style: TextStyle(color: AppColors.primary, fontSize: 12),
                 ),
@@ -213,7 +208,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 100),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               childAspectRatio: 1,
               crossAxisSpacing: 4,
@@ -332,7 +327,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               if (isCurrentWeek)
-                Text(
+                const Text(
                   'This Week',
                   style: TextStyle(color: AppColors.primary, fontSize: 12),
                 ),
@@ -367,7 +362,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
       color: isToday ? AppColors.primary.withValues(alpha: 0.1) : null,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isToday ? BorderSide(color: AppColors.primary, width: 2) : BorderSide.none,
+        side: isToday ? const BorderSide(color: AppColors.primary, width: 2) : BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -497,7 +492,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
             ElevatedButton(
               onPressed: () {
                 HapticFeedback.mediumImpact();
-                context.pushAnimated(WorkoutTimerScreen(workout: workout)).then((_) {
+                context.push('/workout/${workout.id}/timer', extra: workout).then((_) {
                   // Mark as complete when returning
                   ref.read(workoutCalendarProvider.notifier).markComplete(scheduled.id);
                 });
@@ -539,7 +534,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.primary, AppColors.primary],
         ),
@@ -561,7 +556,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                 final incomplete = todaysWorkouts.firstWhere((s) => !s.isCompleted);
                 final workout = notifier.getWorkoutForSchedule(incomplete);
                 if (workout != null) {
-                  context.pushAnimated(WorkoutTimerScreen(workout: workout));
+                  context.push('/workout/${workout.id}/timer', extra: workout);
                 }
               },
               style: TextButton.styleFrom(
@@ -610,7 +605,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
-                    onPressed: () => Navigator.pop(ctx),
+                    onPressed: () => Navigator.of(ctx).pop(),
                     icon: const Icon(Icons.close_rounded),
                   ),
                 ],
@@ -664,7 +659,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: isSelected 
-                            ? BorderSide(color: AppColors.primary, width: 2) 
+                            ? const BorderSide(color: AppColors.primary, width: 2) 
                             : BorderSide.none,
                       ),
                       child: ListTile(
@@ -694,7 +689,7 @@ class _WorkoutCalendarScreenState extends ConsumerState<WorkoutCalendarScreen> {
                             chosenWorkout!.id,
                             chosenDate,
                           );
-                          Navigator.pop(ctx);
+                          Navigator.of(ctx).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('${chosenWorkout!.title} scheduled for ${DateFormat('EEE, MMM d').format(chosenDate)}'),

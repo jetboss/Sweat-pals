@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 /// Reusable skeleton loader widgets with shimmer effect
 class SkeletonLoaders {
   /// Shimmer wrapper that automatically handles dark/light mode
   static Widget shimmerWrap(BuildContext context, {required Widget child}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
-      highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
-      child: child,
-    );
+    return child.animate(onPlay: (controller) => controller.repeat())
+        .shimmer(
+          duration: 1200.ms,
+          color: isDark ? Colors.grey[700]!.withValues(alpha: 0.5) : Colors.grey[100]!.withValues(alpha: 0.8),
+          colors: [
+            isDark ? Colors.grey[800]! : Colors.grey[300]!,
+            isDark ? Colors.grey[700]! : Colors.grey[100]!,
+            isDark ? Colors.grey[800]! : Colors.grey[300]!,
+          ],
+        );
   }
 
   /// Card skeleton for list items

@@ -1,85 +1,113 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/health_service.dart';
 
 class HealthState {
+  final int stepCount;
+  final bool isLoading;
+  final String? error;
+  final bool isConnected;
   final int steps;
   final int calories;
-  final bool isConnected;
-  final bool isLoading;
 
   HealthState({
+    this.stepCount = 0,
+    this.isLoading = false,
+    this.error,
+    this.isConnected = false,
     this.steps = 0,
     this.calories = 0,
-    this.isConnected = false,
-    this.isLoading = false,
   });
 
   HealthState copyWith({
+    int? stepCount,
+    bool? isLoading,
+    String? error,
+    bool? isConnected,
     int? steps,
     int? calories,
-    bool? isConnected,
-    bool? isLoading,
   }) {
     return HealthState(
+      stepCount: stepCount ?? this.stepCount,
+      isLoading: isLoading ?? this.isLoading,
+      error: error ?? this.error,
+      isConnected: isConnected ?? this.isConnected,
       steps: steps ?? this.steps,
       calories: calories ?? this.calories,
-      isConnected: isConnected ?? this.isConnected,
-      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
 
-class HealthNotifier extends StateNotifier<HealthState> {
-  HealthNotifier() : super(HealthState()) {
-    init();
+class HealthNotifier extends Notifier<HealthState> {
+  final HealthService _healthService = HealthService();
+
+  @override
+  HealthState build() {
+    // Defer side effect to avoid modifying state during build
+    Future.microtask(() => _loadSteps());
+    return HealthState();
   }
 
-  Future<void> init() async {
+  Future<void> _loadSteps() async {
     state = state.copyWith(isLoading: true);
     
-    // Check if we have permissions already
-    final hasPerms = await HealthService.hasPermissions();
-    if (hasPerms) {
-      await fetchDailyData();
-    } else {
-      // Don't auto-request, wait for user action or just set loading false
-      state = state.copyWith(isLoading: false);
+    try {
+      final steps = await HealthService.getTodaySteps();
+      int calories = await HealthService.getTodayCalories();
+      
+      // Fallback calorie calculation if Health API returns suspiciously low values
+      if (calories < steps * 0.02) {
+        calories = (steps * 0.04).round();  // ~0.04 cal/step average
+      }
+      
+      state = state.copyWith(
+        stepCount: steps,
+        steps: steps,
+        calories: calories,
+        isLoading: false,
+        error: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
     }
+  }
+
+  Future<void> refresh() async {
+    await _loadSteps();
   }
 
   Future<void> requestSync() async {
     state = state.copyWith(isLoading: true);
-    
-    final granted = await HealthService.requestPermissions();
-    if (granted) {
-      await fetchDailyData();
-    } else {
-      state = state.copyWith(isLoading: false, isConnected: false);
-    }
-  }
-
-  Future<void> fetchDailyData() async {
     try {
-      // Run fetches in parallel
-      final results = await Future.wait([
-        HealthService.getTodaySteps(),
-        HealthService.getTodayCalories(),
-      ]);
+      final steps = await HealthService.getTodaySteps();
+      int calories = await HealthService.getTodayCalories();
+      
+      // Fallback: If Health API returns 0 or suspiciously low calories, calculate from steps
+      // Average person burns ~0.04-0.05 calories per step (varies by weight)
+      // Using 0.04 as conservative estimate
+      if (calories < steps * 0.02) {  // If less than 2 cal per 100 steps, it's wrong
+        calories = (steps * 0.04).round();  // ~280 cal for 7000 steps
+      }
       
       state = state.copyWith(
-        steps: results[0] as int,
-        calories: results[1] as int,
-        isConnected: true,
+        stepCount: steps,
+        steps: steps,
+        calories: calories,
         isLoading: false,
+        isConnected: true,
+        error: null,
       );
     } catch (e) {
-      debugPrint('Error fetching specific health data: $e');
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
     }
   }
 }
 
-final healthProvider = StateNotifierProvider<HealthNotifier, HealthState>((ref) {
+final healthProvider = NotifierProvider<HealthNotifier, HealthState>(() {
   return HealthNotifier();
 });

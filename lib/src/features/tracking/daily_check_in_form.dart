@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../../models/habit_check_in.dart';
+import '../../models/daily_check_in.dart';
 import 'tracking_provider.dart';
+import '../../widgets/rive_animation_widget.dart';
 
 class DailyCheckInForm extends ConsumerStatefulWidget {
   const DailyCheckInForm({super.key});
@@ -16,27 +17,34 @@ class _DailyCheckInFormState extends ConsumerState<DailyCheckInForm> {
   bool _followedMealPlan = false;
   final _mealPlanNotesController = TextEditingController();
   double _sleepHours = 8.0;
-  bool _drankWater = false;
+  bool _drankWater = false; // Legacy toggle, maps to some intake? Or simple 2000ml check?
   int _mood = 3;
   bool _exerciseCompleted = false;
+  int _energyLevel = 5;
+  final _weightController = TextEditingController();
 
   @override
   void dispose() {
     _mealPlanNotesController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
   void _save() {
     if (_formKey.currentState!.validate()) {
-      final entry = HabitCheckIn(
+      final weight = double.tryParse(_weightController.text);
+      
+      final entry = DailyCheckIn(
         id: const Uuid().v4(),
         date: DateTime.now(),
         followedMealPlan: _followedMealPlan,
         mealPlanNotes: _mealPlanNotesController.text,
         sleepHours: _sleepHours,
-        drankWater: _drankWater,
-        mood: _mood,
+        waterIntake: _drankWater ? 2000 : 0, // Simple mapping for now
+        moodScore: _mood, // Renamed field
         exerciseCompleted: _exerciseCompleted,
+        energyLevel: _energyLevel,
+        weight: weight,
       );
 
       ref.read(trackingProvider.notifier).addEntry(entry);
@@ -69,7 +77,11 @@ class _DailyCheckInFormState extends ConsumerState<DailyCheckInForm> {
                   padding: EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      Icon(Icons.emoji_people_rounded),
+                      SizedBox(
+                        height: 50,
+                        width: 50,
+                        child: RiveAnimationWidget(type: RiveAssetType.celebration),
+                      ),
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -100,27 +112,43 @@ class _DailyCheckInFormState extends ConsumerState<DailyCheckInForm> {
                   ),
                 ),
               const Divider(height: 32),
+              
+              // Energy Level (New)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text('Energy Level: $_energyLevel/10'),
+              ),
+              Slider(
+                value: _energyLevel.toDouble(),
+                min: 1,
+                max: 10,
+                divisions: 9,
+                onChanged: (value) => setState(() => _energyLevel = value.toInt()),
+              ),
+              const Divider(height: 32),
+
               // Question 2: Sleep
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text('How many hours of sleep did you get?'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text('Sleep Hours: ${_sleepHours.toStringAsFixed(1)}'),
               ),
               Slider(
                 value: _sleepHours,
                 min: 0,
                 max: 12,
                 divisions: 24,
-                label: _sleepHours.toStringAsFixed(1),
                 onChanged: (value) => setState(() => _sleepHours = value),
               ),
               const Divider(height: 32),
-              // Question 3: Water
+              
+              // Question 3: Water (Simplified)
               SwitchListTile(
                 title: const Text('Did you hit your water goal?'),
                 value: _drankWater,
                 onChanged: (value) => setState(() => _drankWater = value),
               ),
               const Divider(height: 32),
+              
               // Question 4: Mood
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -141,6 +169,21 @@ class _DailyCheckInFormState extends ConsumerState<DailyCheckInForm> {
                 }),
               ),
               const Divider(height: 32),
+              
+              // Weight (New)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: TextFormField(
+                  controller: _weightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Current Weight (kg) (Optional)',
+                    suffixText: 'kg',
+                  ),
+                ),
+              ),
+              const Divider(height: 32),
+
               // Question 5: Exercise
               SwitchListTile(
                 title: const Text('Did you complete your exercise?'),
@@ -148,6 +191,7 @@ class _DailyCheckInFormState extends ConsumerState<DailyCheckInForm> {
                 onChanged: (value) => setState(() => _exerciseCompleted = value),
               ),
               const SizedBox(height: 40),
+              
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

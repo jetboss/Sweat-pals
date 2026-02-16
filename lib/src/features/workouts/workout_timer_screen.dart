@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/workout.dart';
@@ -38,7 +39,7 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
     super.initState();
     
     // Set presence to 'working_out'
-    DatabaseService().updatePresenceStatus('working_out');
+    ref.read(databaseServiceProvider).updatePresenceStatus('working_out');
 
     // Setup breathing animation (simulates heart rate/breath)
     _breathingController = AnimationController(
@@ -56,7 +57,7 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
   @override
   void dispose() {
     // Revert presence to 'online'
-    DatabaseService().updatePresenceStatus('online');
+    ref.read(databaseServiceProvider).updatePresenceStatus('online');
     
     _timer?.cancel();
     _audioService.stop();
@@ -281,8 +282,8 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () {
-                                Navigator.of(context).pop();
-                                Navigator.of(context).pop();
+                                context.pop();
+                                context.pop();
                             },
                             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                             child: const Text("Awesome!"),
@@ -332,6 +333,31 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(widget.workout.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text("End Workout?"),
+                content: const Text("Progress will be lost."),
+                actions: [
+                  TextButton(
+                    onPressed: () => ctx.pop(),
+                    child: const Text("Cancel"),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      ctx.pop(); // Close dialog
+                      if (context.mounted) context.pop(); // Close screen
+                    },
+                    child: const Text("End", style: TextStyle(color: Colors.red)),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
       body: Stack(
         children: [
@@ -398,7 +424,7 @@ class _WorkoutTimerScreenState extends ConsumerState<WorkoutTimerScreen> with Ti
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.white.withOpacity(_isResting ? 0.2 : 0.4),
+                                color: Colors.white.withValues(alpha: _isResting ? 0.2 : 0.4),
                                 blurRadius: 60,
                                 spreadRadius: 10,
                               )

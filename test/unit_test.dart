@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sweat_pals/src/models/user_profile.dart';
-import 'package:sweat_pals/src/models/habit_check_in.dart';
+import 'package:sweat_pals/src/models/daily_check_in.dart';
 
 void main() {
   group('UserProfile Tests', () {
@@ -36,19 +36,22 @@ void main() {
   });
 
   group('Model Validity Tests', () {
-    test('HabitCheckIn constructor', () {
-      final entry = HabitCheckIn(
+    test('DailyCheckIn constructor', () {
+      final entry = DailyCheckIn(
         id: '1',
         date: DateTime.now(),
         followedMealPlan: true,
         mealPlanNotes: 'Good day',
         sleepHours: 8,
-        drankWater: true,
-        mood: 5,
+        waterIntake: 2500,
+        moodScore: 5,
         exerciseCompleted: true,
+        energyLevel: 8,
+        weight: 70.5,
       );
       expect(entry.id, '1');
-      expect(entry.mood, 5);
+      expect(entry.moodScore, 5);
+      expect(entry.energyLevel, 8);
     });
   });
 }

@@ -1,47 +1,25 @@
-import 'package:hive/hive.dart';
-
-part 'user_profile.g.dart';
-
-@HiveType(typeId: 0)
-class UserProfile extends HiveObject {
-  @HiveField(0)
+class UserProfile {
   final String name;
-
-  @HiveField(1)
   final double startingWeight;
-
-  @HiveField(2)
   final double targetWeight;
-
-  @HiveField(3)
   final double height;
-
-  @HiveField(4)
   final int age;
-
-  @HiveField(5)
   final String sex; // 'M' or 'F'
-
-  @HiveField(6)
   final String foodsToAvoid;
-
-  @HiveField(7)
   final DateTime startDate;
-
-  @HiveField(8)
   final int? preferredWorkoutHour; // 0-23
-
-  @HiveField(9)
   final String? fitnessLevel; // beginner/intermediate/advanced
-
-  @HiveField(10)
   final String? bio;
-
-  @HiveField(11)
   final int? restTokens; // Default 3
-
-  @HiveField(12)
   final int? sweatCoins; // Default 100
+  final String? avatarUrl;
+  final String subscriptionTier; // 'free', 'pro', 'squad'
+  final int currentStreak;
+  final double consistencyScore;
+  final String? timezone;
+  final String aiTrainerMode; // 'friend', 'sergeant', 'pro'
+  final String? inviteCode;
+  final String? partnerId;
 
   UserProfile({
     required this.name,
@@ -57,6 +35,14 @@ class UserProfile extends HiveObject {
     this.bio,
     this.restTokens = 3,
     this.sweatCoins = 100,
+    this.avatarUrl,
+    this.subscriptionTier = 'free',
+    this.currentStreak = 0,
+    this.consistencyScore = 0.0,
+    this.timezone,
+    this.aiTrainerMode = 'friend',
+    this.inviteCode,
+    this.partnerId,
   });
 
   double get bmi => startingWeight / ((height / 100) * (height / 100));

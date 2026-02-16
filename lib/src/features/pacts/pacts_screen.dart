@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:confetti/confetti.dart';
 import '../../theme/app_colors.dart';
-import '../../services/database_service.dart';
+import 'pact_provider.dart';
+import '../../models/pact.dart';
 import '../../providers/user_provider.dart';
 
 class PactsScreen extends ConsumerStatefulWidget {
@@ -15,7 +17,6 @@ class PactsScreen extends ConsumerStatefulWidget {
 }
 
 class _PactsScreenState extends ConsumerState<PactsScreen> {
-  final _db = DatabaseService();
   late ConfettiController _confettiController;
 
   @override
@@ -32,13 +33,9 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(userProvider);
-    final sweatCoins = user?.sweatCoins ?? 0; // Use Hive or fetch from DB? Ideally Hive syncs.
-    
-    // For now, let's also fetch from DB profile stream if userProvider isn't syncing fast enough with transactional updates?
-    // Actually userProvider reads from Hive. We need to make sure Hive gets updated.
-    // Sync logic helps, but let's assume Hive is eventual consistent.
-    // Or we can stream profile for this screen specifically for realtime coin updates.
+    final userAsync = ref.watch(userProvider);
+    final sweatCoins = userAsync.value?.sweatCoins ?? 0;
+    final pactsAsync = ref.watch(pactsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -59,21 +56,15 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
                   const SizedBox(height: 24),
                   
                   // Pacts List
-                  const Text("Your Wagers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text("Your Active Pacts", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   
                   Expanded(
-                    child: StreamBuilder<List<Map<String, dynamic>>>(
-                      stream: _db.streamMyPacts(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    child: pactsAsync.when(
+                      data: (pacts) {
+                        if (pacts.isEmpty) {
                           return _buildEmptyState();
                         }
-                        
-                        final pacts = snapshot.data!;
                         return ListView.separated(
                           itemCount: pacts.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -82,6 +73,8 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
                           },
                         );
                       },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => Center(child: Text("Error: $err")),
                     ),
                   ),
                 ],
@@ -122,7 +115,7 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.3),
+            color: Colors.orange.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 8),
           ),
@@ -165,17 +158,17 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.handshake_outlined, size: 60, color: AppColors.textSecondary),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             "No active pacts",
             style: TextStyle(fontSize: 18, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             "Create a wager to boost your motivation!",
             style: TextStyle(color: AppColors.textSecondary),
@@ -185,25 +178,20 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
     );
   }
 
-  Widget _buildPactCard(Map<String, dynamic> pact) {
-    final status = pact['status'] as String;
-    final title = pact['title'] as String;
-    final wager = pact['wager_amount'] as int;
-    final target = pact['target_count'] as int;
-    final deadline = DateTime.parse(pact['deadline']).toLocal();
-    final isExpired = DateTime.now().isAfter(deadline);
+  Widget _buildPactCard(Pact pact) {
+    final isExpired = DateTime.now().isAfter(pact.deadline);
     
     // Status Logic (Visual)
     Color statusColor = Colors.blue;
     IconData statusIcon = Icons.timelapse;
     
-    if (status == 'won') {
+    if (pact.status == 'won') {
       statusColor = Colors.green;
       statusIcon = Icons.emoji_events;
-    } else if (status == 'lost') {
+    } else if (pact.status == 'lost') {
       statusColor = Colors.red;
       statusIcon = Icons.thumb_down;
-    } else if (isExpired && status == 'active') {
+    } else if (isExpired && pact.status == 'active') {
       statusColor = Colors.orange; // Pending validation
       statusIcon = Icons.hourglass_bottom;
     }
@@ -216,47 +204,56 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(statusIcon, color: statusColor),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(pact.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.monetization_on, size: 14, color: AppColors.textSecondary),
-                const SizedBox(width: 4),
-                Text("$wager coins staked", style: TextStyle(color: AppColors.textSecondary)),
+                 Icon(Icons.repeat, size: 14, color: AppColors.textSecondary),
+                 SizedBox(width: 4),
+                 Text("Goal: ${pact.targetCount}x / ${pact.frequency}", style: const TextStyle(color: AppColors.textSecondary)),
               ],
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14, color: AppColors.textSecondary),
+                 Icon(Icons.local_fire_department, size: 14, color: Colors.orange),
+                 SizedBox(width: 4),
+                 Text("Current Streak: ${pact.currentStreak}", style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.monetization_on, size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
-                Text("End: ${DateFormat('MMM d, h:mm a').format(deadline)}", style: TextStyle(color: AppColors.textSecondary)),
+                Text("${pact.wagerAmount} coins staked", style: const TextStyle(color: AppColors.textSecondary)),
               ],
             ),
           ],
         ),
-        trailing: status == 'active' && !isExpired
-            ? _buildProgressIndicator() // Mock progress
+        trailing: pact.status == 'active' && !isExpired
+            ? _buildProgressIndicator(pact) 
             : Chip(
-                label: Text(status.toUpperCase()),
-                backgroundColor: statusColor.withOpacity(0.1),
+                label: Text(pact.status.toUpperCase()),
+                backgroundColor: statusColor.withValues(alpha: 0.1),
                 labelStyle: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
               ),
       ),
     );
   }
 
-  Widget _buildProgressIndicator() {
-     // Ideally fetch actual progress (logs count vs target)
-     return const CircularProgressIndicator(value: 0.3, strokeWidth: 4, backgroundColor: Colors.black12);
+  Widget _buildProgressIndicator(Pact pact) {
+     // Visual placeholder for progress
+     final progress = (pact.currentStreak % pact.targetCount) / pact.targetCount;
+     return CircularProgressIndicator(value: progress > 0 ? progress : 0.1, strokeWidth: 4, backgroundColor: Colors.black12);
   }
 
   void _showCreatePactModal(BuildContext context, int currentCoins) {
@@ -299,7 +296,7 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
                   controller: targetController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: "Target Workouts",
+                    labelText: "Target Workouts (Weekly)",
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -333,34 +330,42 @@ class _PactsScreenState extends ConsumerState<PactsScreen> {
                       }
 
                       try {
-                        final deadline = DateTime.now().add(const Duration(days: 7)); // Hardcode 7 days for MVP
-                        await _db.createPact(
+                        await ref.read(pactsProvider.notifier).createPact(
                           title: titleController.text, 
+                          frequency: 'weekly', // Hardcoded for MVP
                           targetCount: int.tryParse(targetController.text) ?? 3, 
-                          wagerAmount: wager.round(), 
-                          deadline: deadline
-                        );
-                        Navigator.pop(ctx);
-                        HapticFeedback.mediumImpact();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text("Pact Created! let's go! 🚀"), backgroundColor: AppColors.success)
+                          wagerAmount: wager.round(),
                         );
                         
-                        // Optimistically update local state if needed via provider
-                        // Use Hive to decrement coins?
-                        // For MVP, DatabaseService is source of truth for coins, 
-                        // syncing back to Hive on generic sync.
+                        if (ctx.mounted) ctx.pop();
+                        HapticFeedback.mediumImpact();
+                        _confettiController.play();
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text("Pact Created! let's go! 🚀"), backgroundColor: AppColors.success)
+                          );
+                        }
                       } catch (e) {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                           SnackBar(content: Text("Error: $e"))
-                        );
+                         if (context.mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text("Error: $e"))
+                          );
+                         }
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text("Seal the Pact 🤝"),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Seal the Pact", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        SizedBox(width: 8),
+                        Icon(Icons.handshake_rounded, color: Colors.white, size: 20),
+                      ],
+                    ),
                   ),
                 ),
               ],

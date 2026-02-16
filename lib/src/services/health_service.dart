@@ -12,6 +12,7 @@ class HealthService {
     HealthDataType.STEPS,
     HealthDataType.DISTANCE_DELTA,
     HealthDataType.ACTIVE_ENERGY_BURNED,
+    HealthDataType.TOTAL_CALORIES_BURNED,
     HealthDataType.WORKOUT,
   ];
 
@@ -185,7 +186,8 @@ class HealthService {
       final now = DateTime.now();
       final midnight = DateTime(now.year, now.month, now.day);
       
-      final data = await _health.getHealthDataFromTypes(
+      // 1. Try Active Energy (Preferred)
+      var data = await _health.getHealthDataFromTypes(
         types: [HealthDataType.ACTIVE_ENERGY_BURNED],
         startTime: midnight,
         endTime: now,
@@ -197,6 +199,21 @@ class HealthService {
           total += (point.value as NumericHealthValue).numericValue.toDouble();
         }
       }
+      
+      // 2. If 0, try Total Calories (Fallback)
+      if (total < 1) {
+         data = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.TOTAL_CALORIES_BURNED],
+          startTime: midnight,
+          endTime: now,
+        );
+        for (final point in data) {
+          if (point.value is NumericHealthValue) {
+            total += (point.value as NumericHealthValue).numericValue.toDouble();
+          }
+        }
+      }
+
       return total.toInt();
     } catch (e) {
       debugPrint('Error getting today calories: $e');

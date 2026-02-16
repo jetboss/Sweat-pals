@@ -27,7 +27,7 @@ class ProgressTimelineScreen extends ConsumerWidget {
         : 0;
     
     // Calculate weight change
-    final startWeight = firstReview?.weight ?? user?.startingWeight ?? 0;
+    final startWeight = firstReview?.weight ?? user.value?.startingWeight ?? 0;
     final currentWeight = reviews.isNotEmpty ? reviews.first.weight : startWeight;
     final weightChange = currentWeight - startWeight;
 

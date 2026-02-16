@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../providers/user_provider.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/rive_animation_widget.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -31,19 +32,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       
       if (response.user != null && mounted) {
-        // Trigger generic user initialization to fetch profile
-        // The provider inside MainShell/App usually handles this, but since we are manually navigating,
-        // we might want to ensure the state is updated. 
-        // Force refresh of user provider logic essentially happens on app rebuild or we can manually refresh.
+        // Save onboarding complete flag
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('onboarding_complete', true);
         
-        // Mark onboarding as complete since they are logging in
-        // Note: Ideally we check if they actually finished setup, but for now assumption is yes.
-        ref.read(onboardingCompleteProvider.notifier).state = true; 
+        // Refresh providers to update app state
+        ref.refresh(userProvider);
+        ref.refresh(onboardingCompleteProvider);
         
-        Navigator.pop(context); // Close login screen
-        // Depending on where this was called from, might need to ensure we go to Home.
-        // If from Onboarding, popping might return to Onboarding. 
-        // We probably want to replace the route.
+        if (mounted) context.pop(); // Close login screen
       }
     } catch (e) {
       if (mounted) {
@@ -85,9 +82,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: _isLoading 
-                ? const CircularProgressIndicator(color: Colors.white) 
-                : const Text("Log In", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: _isLoading 
+                  ? const RiveAnimationWidget(type: RiveAssetType.loading, height: 30, width: 30) 
+                  : const Text("Log In", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
           ],
         ),

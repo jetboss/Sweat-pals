@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -26,6 +26,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _bioController = TextEditingController();
   int _selectedHour = 7; // Default 7 AM
   String _selectedFitnessLevel = 'beginner';
+  String _selectedAiMode = 'friend';
   bool _isEditing = false;
   bool _isSaving = false;
   bool _isUploadingAvatar = false;
@@ -39,15 +40,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _loadProfileData() {
-    final user = ref.read(userProvider);
+    final userAsync = ref.read(userProvider);
+    final user = userAsync.value;
     if (user != null) {
       _nameController.text = user.name;
-      _weightController.text = user.startingWeight.toString();
       _weightController.text = user.startingWeight.toString();
       _heightController.text = user.height.toString();
       _bioController.text = user.bio ?? '';
       _selectedHour = user.preferredWorkoutHour ?? 7;
       _selectedFitnessLevel = user.fitnessLevel ?? 'beginner';
+      _selectedAiMode = user.aiTrainerMode ?? 'friend';
     }
   }
 
@@ -56,7 +58,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (userId == null) return;
     
     try {
-      final profile = await DatabaseService().getProfile(userId);
+      final profile = await ref.read(databaseServiceProvider).getProfile(userId);
       if (profile != null && mounted) {
         setState(() {
           _avatarUrl = profile['avatar_url'];
@@ -104,7 +106,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           .getPublicUrl(fileName);
       
       // Update profile with avatar URL
-      await DatabaseService().syncProfileToSupabase(
+      await ref.read(databaseServiceProvider).syncProfileToSupabase(
         name: _nameController.text.trim(),
         avatarUrl: publicUrl,
       );
@@ -165,7 +167,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           radius: 50,
                           backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                           child: Text(
-                            (user?.name.isNotEmpty == true ? user!.name : 'P').substring(0, 1).toUpperCase(),
+                            (user.value?.name.isNotEmpty == true ? user.value!.name : 'P').substring(0, 1).toUpperCase(),
                             style: const TextStyle(
                               fontSize: 40,
                               fontWeight: FontWeight.bold,
@@ -206,7 +208,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 )
               else
                 Text(
-                  user?.name ?? 'Sweat Pal',
+                  user.value?.name ?? 'Sweat Pal',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               
@@ -217,26 +219,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 32),
               
               // Stats Cards
-              if (user != null) ...[
+              if (user.value != null) ...[
                 Row(
                   children: [
-                    Expanded(child: _buildStatCard('BMI', user.bmi.toStringAsFixed(1), Icons.monitor_weight)),
+                    Expanded(child: _buildStatCard('BMI', user.value!.bmi.toStringAsFixed(1), Icons.monitor_weight)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildStatCard('TDEE', '${user.tdee.toStringAsFixed(0)} cal', Icons.local_fire_department)),
+                    Expanded(child: _buildStatCard('TDEE', '${user.value!.tdee.toStringAsFixed(0)} cal', Icons.local_fire_department)),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _buildStatCard('Weight', '${user.startingWeight} kg', Icons.fitness_center)),
+                    Expanded(child: _buildStatCard('Weight', '${user.value!.startingWeight} kg', Icons.fitness_center)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildStatCard('Height', '${user.height} cm', Icons.height)),
+                    Expanded(child: _buildStatCard('Height', '${user.value!.height} cm', Icons.height)),
                   ],
                 ),
               ],
               const SizedBox(height: 32),
               
-              if (_isEditing || (user != null && user.preferredWorkoutHour != null)) ...[
+              if (_isEditing || (user.value != null && user.value!.preferredWorkoutHour != null)) ...[
                 const Align(
                    alignment: Alignment.centerLeft,
                    child: Text('Matching Preferences', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -255,7 +257,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                    _buildSettingsTile(
                      icon: Icons.access_time_filled, 
                      title: 'Usual Workout Time', 
-                     trailing: Text(_formatHour(user!.preferredWorkoutHour ?? 7), style: TextStyle(color: Colors.grey[600])),
+                     trailing: Text(_formatHour(user.value!.preferredWorkoutHour ?? 7), style: TextStyle(color: Colors.grey[600])),
                    ),
                 
                 const SizedBox(height: 12),
@@ -272,7 +274,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                    _buildSettingsTile(
                      icon: Icons.fitness_center,
                      title: 'Fitness Level',
-                     trailing: Text((user!.fitnessLevel ?? 'BEGINNER').toUpperCase(), style: TextStyle(color: Colors.grey[600])),
+                     trailing: Text((user.value!.fitnessLevel ?? 'BEGINNER').toUpperCase(), style: TextStyle(color: Colors.grey[600])),
                    ),
                    
                 const SizedBox(height: 12),
@@ -291,7 +293,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                        decoration: const InputDecoration.collapsed(hintText: 'Short bio for your future pal...'),
                      ),
                    )
-                else if (user?.bio != null && user!.bio!.isNotEmpty)
+                else if (user.value?.bio != null && user.value!.bio!.isNotEmpty)
                    Container(
                      width: double.infinity,
                      padding: const EdgeInsets.all(16),
@@ -299,7 +301,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         color: isDark ? Colors.grey[850] : Colors.grey[100],
                         borderRadius: BorderRadius.circular(16),
                      ),
-                     child: Text(user.bio!, style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic)),
+                     child: Text(user.value?.bio ?? '', style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic)),
                    ),
                    
                 const SizedBox(height: 32),
@@ -369,6 +371,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   },
                 ),
               ),
+
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+
+              // AI Trainer Mode
+              _buildDropdownTile(
+                icon: Icons.psychology, 
+                title: 'AI Trainer Personality',
+                value: _getAiModeLabel(_selectedAiMode),
+                onTap: _showAiModePicker,
+              ),
               
               const SizedBox(height: 16),
               const Divider(),
@@ -386,9 +400,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         title: const Text('Log Out?'),
                         content: const Text('Are you sure you want to log out?'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => ctx.pop(false), child: const Text('Cancel')),
                           TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
+                            onPressed: () => ctx.pop(true),
                             child: const Text('Log Out', style: TextStyle(color: Colors.red)),
                           ),
                         ],
@@ -397,11 +411,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     
                     if (confirm == true) {
                       await AuthService().signOut();
-                      if (mounted) {
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-                          (route) => false,
-                        );
+                      if (context.mounted) {
+                        context.go('/onboarding');
                       }
                     }
                   },
@@ -433,7 +444,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         decoration: BoxDecoration(
           color: isDark ? Colors.grey[850] : Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
         ),
         child: Row(
           children: [
@@ -496,6 +507,109 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  void _showAiModePicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Choose your Trainer", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ...['friend', 'sergeant', 'pro'].map((mode) {
+              return ListTile(
+                leading: Text(_getAiModeEmoji(mode), style: const TextStyle(fontSize: 24)),
+                title: Text(_getAiModeLabel(mode)),
+                subtitle: Text(_getAiModeDescription(mode)),
+                onTap: () async {
+                  setState(() => _selectedAiMode = mode);
+                  ctx.pop();
+                  // Auto-save just the mode preference for convenience? 
+                  // Or let user hit save. Let's auto-save here since it's a setting not profile edit.
+                  // Actually, waiting for "Save Profile" seems consistent with other edit fields 
+                  // BUT this is in "Settings" section which usually auto-saves.
+                  // However, let's keep it tied to specific save action for now OR auto-save.
+                  // Given the UI layout, it looks like "Save Profile" button is above Settings.
+                  // Settings section items (Switch) act immediately.
+                  // So let's auto-save this preference immediately.
+                  await _saveAiModeOnly(mode);
+                },
+                trailing: _selectedAiMode == mode ? const Icon(Icons.check, color: AppColors.primary) : null,
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveAiModeOnly(String mode) async {
+    final userAsync = ref.read(userProvider);
+    final user = userAsync.value;
+    if (user == null) return;
+    
+    // Save to provider/local
+    final updatedProfile = UserProfile(
+      name: user.name,
+      startingWeight: user.startingWeight,
+      targetWeight: user.targetWeight,
+      height: user.height,
+      age: user.age,
+      sex: user.sex,
+      foodsToAvoid: user.foodsToAvoid,
+      startDate: user.startDate,
+      preferredWorkoutHour: user.preferredWorkoutHour,
+      fitnessLevel: user.fitnessLevel,
+      bio: user.bio,
+      restTokens: user.restTokens,
+      sweatCoins: user.sweatCoins,
+      avatarUrl: user.avatarUrl,
+      subscriptionTier: user.subscriptionTier,
+      currentStreak: user.currentStreak,
+      consistencyScore: user.consistencyScore,
+      timezone: user.timezone,
+      aiTrainerMode: mode,
+    );
+    
+    await ref.read(userProvider.notifier).saveProfile(updatedProfile);
+    await ref.read(databaseServiceProvider).syncProfileToSupabase(
+        name: user.name,
+        aiTrainerMode: mode,
+    );
+    
+    if (mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Trainer set to ${_getAiModeLabel(mode)}')),
+       );
+    }
+  }
+
+  String _getAiModeLabel(String mode) {
+    switch (mode) {
+      case 'sergeant': return 'Drill Sergeant';
+      case 'pro': return 'Pro Coach';
+      case 'friend': default: return 'Best Friend';
+    }
+  }
+
+  String _getAiModeEmoji(String mode) {
+    switch (mode) {
+      case 'sergeant': return '👮‍';
+      case 'pro': return '🔬';
+      case 'friend': default: return '🌟';
+    }
+  }
+
+  String _getAiModeDescription(String mode) {
+    switch (mode) {
+      case 'sergeant': return 'Ruthless. No excuses.';
+      case 'pro': return 'Data-driven and balanced.';
+      case 'friend': default: return 'Supportive and fun!';
+    }
+  }
+
   Widget _buildStatCard(String label, String value, IconData icon) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
@@ -542,8 +656,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _isSaving = true);
     
     try {
-      final user = ref.read(userProvider);
-      if (user == null) return;
+      final userAsync = ref.read(userProvider);
+      final user = userAsync.value;
+      if (user == null) {
+        setState(() => _isSaving = false);
+        return;
+      }
       
       // Create updated profile
       final updatedProfile = UserProfile(
@@ -558,17 +676,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         preferredWorkoutHour: _selectedHour,
         fitnessLevel: _selectedFitnessLevel,
         bio: _bioController.text.trim(),
+        aiTrainerMode: _selectedAiMode,
       );
       
       // Save locally
       await ref.read(userProvider.notifier).saveProfile(updatedProfile);
       
       // Sync to Supabase
-      await DatabaseService().syncProfileToSupabase(
+      await ref.read(databaseServiceProvider).syncProfileToSupabase(
         name: _nameController.text.trim(),
         preferredWorkoutHour: _selectedHour,
         fitnessLevel: _selectedFitnessLevel,
         bio: _bioController.text.trim(),
+        aiTrainerMode: _selectedAiMode,
       );
       
       HapticFeedback.mediumImpact();
@@ -582,9 +702,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         setState(() => _isEditing = false);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving: $e')),
+        );
+      }
     } finally {
       setState(() => _isSaving = false);
     }

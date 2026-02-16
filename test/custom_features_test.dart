@@ -31,7 +31,7 @@ void main() {
 
   group('AvatarNotifier Tests', () {
     test('Initial state is Level 1 Neutral', () {
-      final progress = const WorkoutProgress();
+      const progress = WorkoutProgress();
       final notifier = AvatarNotifier(progress);
       
       expect(notifier.state.level, 1);
@@ -41,13 +41,13 @@ void main() {
 
     test('Level upgrades based on total workouts', () {
       // Level 2: 6+ workouts
-      final progressL2 = const WorkoutProgress(totalWorkoutsCompleted: 6);
+      const progressL2 = WorkoutProgress(totalWorkoutsCompleted: 6);
       final notifierL2 = AvatarNotifier(progressL2);
       expect(notifierL2.state.level, 2);
       expect(notifierL2.state.primaryColor, const Color(0xFFFFB74D));
 
       // Level 3: 16+ workouts
-      final progressL3 = const WorkoutProgress(totalWorkoutsCompleted: 16);
+      const progressL3 = WorkoutProgress(totalWorkoutsCompleted: 16);
       final notifierL3 = AvatarNotifier(progressL3);
       expect(notifierL3.state.level, 3);
       expect(notifierL3.state.primaryColor, const Color(0xFFE57373));

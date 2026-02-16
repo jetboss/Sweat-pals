@@ -1,36 +1,62 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../../models/morning_prompt.dart';
-import '../../utils/constants.dart';
+import 'package:drift/drift.dart' as drift;
+import '../../database/app_database.dart';
+import '../../models/journal_entry.dart' as models;
+import '../../../main.dart';
 
-final journalProvider = StateNotifierProvider<JournalNotifier, List<MorningPrompt>>((ref) {
-  return JournalNotifier();
-});
-
-class JournalNotifier extends StateNotifier<List<MorningPrompt>> {
-  JournalNotifier() : super([]) {
+class JournalNotifier extends Notifier<List<models.JournalEntry>> {
+  @override
+  List<models.JournalEntry> build() {
     _loadEntries();
+    return [];
   }
 
-  late Box<MorningPrompt> _box;
-
-  void _loadEntries() {
+  Future<void> _loadEntries() async {
     try {
-      _box = Hive.box<MorningPrompt>(AppConstants.morningPromptBox);
-      state = _box.values.toList()..sort((a, b) => b.date.compareTo(a.date));
+      final db = ref.read(appDatabaseProvider);
+      final results = await (db.select(db.journalEntriesTable)  
+        ..orderBy([(t) => drift.OrderingTerm.desc(t.entryDateTime)])).get();
+      
+      state = results.map((row) => models.JournalEntry(
+        id: row.id,
+        content: row.content,
+        mood: row.mood,
+        dateTime: row.entryDateTime,
+      )).toList();
     } catch (e) {
-      debugPrint('Error loading morning prompts: $e');
-      state = [];
+      print("Error loading journal entries: $e");
     }
   }
 
-  Future<void> addEntry(MorningPrompt entry) async {
+  Future<void> addEntry(models.JournalEntry entry) async {
     try {
-      await _box.put(entry.id, entry);
-      state = [entry, ...state]..sort((a, b) => b.date.compareTo(a.date));
+      final db = ref.read(appDatabaseProvider);
+      await db.into(db.journalEntriesTable).insert(
+        JournalEntriesTableCompanion.insert(
+          id: entry.id,
+          userId: 'current_user', // TODO: Get from user provider
+          content: entry.content,
+          mood: entry.mood,
+          entryDateTime: entry.dateTime,
+        ),
+      );
+      state = [entry, ...state];
     } catch (e) {
-      debugPrint('Error adding morning prompt: $e');
+      print("Error adding journal entry: $e");
+    }
+  }
+
+  Future<void> deleteEntry(String entryId) async {
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await (db.delete(db.journalEntriesTable)..where((t) => t.id.equals(entryId))).go();
+      state = state.where((e) => e.id != entryId).toList();
+    } catch (e) {
+      print("Error deleting journal entry: $e");
     }
   }
 }
+
+final journalProvider = NotifierProvider<JournalNotifier, List<models.JournalEntry>>(() {
+  return JournalNotifier();
+});

@@ -21,13 +21,13 @@ final insightsProvider = Provider<DailyInsight>((ref) {
   // 1. Time-based greeting / nudges
   if (hour < 9) {
     return DailyInsight(
-      'Rise and grind, ${user?.name ?? "Pal"}! Early workouts burn more fat.',
+      'Rise and grind, ${user.value?.name ?? "Pal"}! Early workouts burn more fat.',
       '🌅',
       'time',
     );
   } else if (hour > 20) {
     return DailyInsight(
-      'Rest and recover, ${user?.name ?? "Pal"}. Quality sleep = gains.',
+      'Rest and recover, ${user.value?.name ?? "Pal"}. Quality sleep = gains.',
       '🌙',
       'time',
     );

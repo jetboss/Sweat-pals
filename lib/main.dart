@@ -1,24 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/app.dart';
-import 'src/models/user_profile.dart';
-import 'src/models/workout.dart';
-import 'src/models/workout_progress.dart';
-import 'src/models/scheduled_workout.dart';
-import 'src/models/workout_entry.dart';
-import 'src/models/weight_entry.dart';
-import 'src/models/journal_entry.dart';
-import 'src/models/habit_check_in.dart';
-import 'src/models/morning_prompt.dart';
-import 'src/models/weekly_review.dart';
-import 'src/models/progress_photo.dart';
-import 'src/utils/constants.dart';
-
 import 'src/services/notifications_service.dart';
-import 'src/models/pending_action.dart';
-import 'src/services/sync_queue_service.dart';
+import 'src/database/app_database.dart';
+
+// Global database provider
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  return AppDatabase();
+});
 
 void main() async {
   try {
@@ -32,29 +22,23 @@ void main() async {
     );
     debugPrint('Supabase initialized.');
 
+    // TEMPORARY: Comment out to find initialization hang
     // Initialize Notifications
     await NotificationsService.init();
     debugPrint('Notifications initialized.');
     
-    // Initialize Hive
-    await Hive.initFlutter();
-    debugPrint('Hive initialized.');
-    
-    // Register Adapters
-    _registerAdapters();
-    
-    // Open Boxes
-    await _openBoxes();
-    debugPrint('Hive boxes opened.');
+    // Drift database will be initialized lazily by the provider
+    debugPrint('Drift database ready (lazy init).');
 
-    // Initialize Sync Queue
-    final syncQueue = SyncQueueService();
-    await syncQueue.init();
-    debugPrint('Sync Queue initialized.');
+    // TEMPORARY: Commented out to prevent app hang during startup
+    // TODO: Fix SyncQueueService initialization
+    // Sync Queue initialization handled in MainShell
+    debugPrint('Sync Queue initialized in MainShell.');
+
     
     runApp(
-      ProviderScope(
-        child: const MyApp(),
+      const ProviderScope(
+        child: MyApp(),
       ),
     );
   } catch (e, stack) {
@@ -62,45 +46,4 @@ void main() async {
     debugPrint(stack.toString());
     runApp(MaterialApp(home: Scaffold(body: Center(child: Text('Pal, we had a major snag! Check logs: $e')))));
   }
-}
-
-void _registerAdapters() {
-  Hive.registerAdapter(UserProfileAdapter());
-  // Hive.registerAdapter(DailyPlanAdapter()); // REMOVED
-  Hive.registerAdapter(ExerciseAdapter());
-  Hive.registerAdapter(WorkoutAdapter());
-  Hive.registerAdapter(WorkoutSessionAdapter());
-  Hive.registerAdapter(WorkoutLevelAdapter());
-  Hive.registerAdapter(EquipmentAdapter());
-  Hive.registerAdapter(WorkoutCategoryAdapter());
-  Hive.registerAdapter(WorkoutProgressAdapter());
-  Hive.registerAdapter(ScheduledWorkoutAdapter());
-  // Hive.registerAdapter(MealEntryAdapter()); // REMOVED
-  Hive.registerAdapter(WorkoutEntryAdapter());
-  Hive.registerAdapter(WeightEntryAdapter());
-  Hive.registerAdapter(JournalEntryAdapter());
-  Hive.registerAdapter(HabitCheckInAdapter());
-  Hive.registerAdapter(MorningPromptAdapter());
-  Hive.registerAdapter(WeeklyReviewAdapter());
-  Hive.registerAdapter(ProgressPhotoAdapter());
-  Hive.registerAdapter(PendingActionAdapter());
-  // Hive.registerAdapter(AchievementAdapter()); // REMOVED
-  // Hive.registerAdapter(AchievementCategoryAdapter()); // REMOVED
-}
-
-Future<void> _openBoxes() async {
-    // Open Boxes
-    await Hive.openBox<UserProfile>(AppConstants.userBox);
-    await Hive.openBox<WorkoutSession>('workout_sessions');
-    await Hive.openBox<WorkoutProgress>('workout_progress');
-    await Hive.openBox<ScheduledWorkout>('scheduled_workouts');
-    await Hive.openBox<WorkoutEntry>(AppConstants.workoutsBox);
-    await Hive.openBox<WeightEntry>(AppConstants.trackingBox);
-    await Hive.openBox<JournalEntry>(AppConstants.journalBox);
-    await Hive.openBox<HabitCheckIn>(AppConstants.habitTrackingBox);
-    await Hive.openBox<MorningPrompt>(AppConstants.morningPromptBox);
-    await Hive.openBox<WeeklyReview>(AppConstants.weeklyReviewBox);
-    await Hive.openBox<ProgressPhoto>(AppConstants.progressPhotosBox);
-    await Hive.openBox<Workout>('custom_workouts');
-
 }

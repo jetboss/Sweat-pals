@@ -1,13 +1,28 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
 import 'sync_queue_service.dart';
 
+final databaseServiceProvider = Provider<DatabaseService>((ref) {
+  return DatabaseService(ref);
+});
+
 class DatabaseService {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final AuthService _auth = AuthService();
+  late final SyncQueueService _syncQueue;
 
-  final SyncQueueService _syncQueue = SyncQueueService();
+  DatabaseService(this._ref) {
+    _syncQueue = _ref.read(syncQueueProvider);
+  }
+
+  String _generateInviteCode() {
+    // Determine a random 6-character alphanumeric code
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return List.generate(6, (index) => chars[DateTime.now().microsecond % chars.length]).join();
+  }
 
   /// Log a workout completion to Supabase
   Future<void> logWorkout(String workoutId, int durationSeconds, {DateTime? completedAt}) async {
@@ -22,7 +37,7 @@ class DatabaseService {
         'completed_at': (completedAt ?? DateTime.now()).toIso8601String(),
       });
     } catch (e) {
-      print('Error logWorkout: $e - Queueing offline action');
+      debugPrint('Error logWorkout: $e - Queueing offline action');
       await _syncQueue.queueAction('log_workout', {
         'workout_id': workoutId,
         'duration_seconds': durationSeconds,
@@ -46,6 +61,16 @@ class DatabaseService {
         .order('completed_at', ascending: false)
         .limit(10);
   }
+
+  /// Stream partner's daily check-ins
+  Stream<List<Map<String, dynamic>>> streamPartnerCheckIns(String partnerId) {
+    return _supabase
+        .from('daily_checkins')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', partnerId)
+        .order('date', ascending: false)
+        .limit(7);
+  }
   
   /// Get partner's logs for today (Future)
   Future<List<Map<String, dynamic>>> getPartnerLogsForToday(String partnerId) async {
@@ -60,7 +85,7 @@ class DatabaseService {
           .gte('completed_at', startOfDay);
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print('Error fetching partner logs: $e');
+      debugPrint('Error fetching partner logs: $e');
       return [];
     }
   }
@@ -78,7 +103,7 @@ class DatabaseService {
         // created_at auto-generated
       });
     } catch (e) {
-      print('Error sending nudge: $e');
+      debugPrint('Error sending nudge: $e');
       rethrow;
     }
   }
@@ -126,8 +151,8 @@ class DatabaseService {
 
       return squadId;
     } catch (e) {
-      print('Error creating squad: $e');
-      throw e; // Rethrow so UI can show it
+      debugPrint('Error creating squad: $e');
+      rethrow; // Rethrow so UI can show it
     }
   }
 
@@ -154,7 +179,7 @@ class DatabaseService {
       });
       return true;
     } catch (e) {
-      print('Error joining squad: $e');
+      debugPrint('Error joining squad: $e');
       return false;
     }
   }
@@ -199,6 +224,7 @@ class DatabaseService {
       final res = await _supabase.from('profiles').select().eq('id', userId).single();
       return res;
     } catch (e) {
+      debugPrint('Error getting profile: $e');
       return null;
     }
   }
@@ -211,6 +237,12 @@ class DatabaseService {
     String? fitnessLevel,
     String? bio,
     int? sweatCoins,
+    String? subscriptionTier,
+    int? currentStreak,
+    double? consistencyScore,
+    String? timezone,
+    String? aiTrainerMode,
+    String? inviteCode,
   }) async {
     final userId = _auth.currentUserId;
     if (userId == null) return;
@@ -224,10 +256,17 @@ class DatabaseService {
         if (fitnessLevel != null) 'fitness_level': fitnessLevel,
         if (bio != null) 'bio': bio,
         if (sweatCoins != null) 'sweat_coins': sweatCoins,
+        if (subscriptionTier != null) 'subscription_tier': subscriptionTier,
+        if (currentStreak != null) 'current_streak': currentStreak,
+        if (consistencyScore != null) 'consistency_score': consistencyScore,
+        if (timezone != null) 'timezone': timezone,
+        if (timezone != null) 'timezone': timezone,
+        if (aiTrainerMode != null) 'ai_trainer_mode': aiTrainerMode,
+        if (inviteCode != null) 'invite_code': inviteCode,
       });
-      print('Profile synced to Supabase');
+      debugPrint('Profile synced to Supabase');
     } catch (e) {
-      print('Error syncing profile: $e - Queueing offline action');
+      debugPrint('Error syncing profile: $e - Queueing offline action');
       await _syncQueue.queueAction('sync_profile', {
         'name': name,
         'avatar_url': avatarUrl,
@@ -235,7 +274,58 @@ class DatabaseService {
         'fitness_level': fitnessLevel,
         'bio': bio,
         'sweat_coins': sweatCoins,
+        'subscription_tier': subscriptionTier,
+        'current_streak': currentStreak,
+        'consistency_score': consistencyScore,
+        'timezone': timezone,
+
+        'ai_trainer_mode': aiTrainerMode,
+        'invite_code': inviteCode,
       });
+    }
+  }
+
+  /// Sync Daily Check-In to Supabase
+  Future<void> syncDailyCheckIn(Map<String, dynamic> checkInData) async {
+    final userId = _auth.currentUserId;
+    if (userId == null) return;
+
+    try {
+      await _supabase.from('daily_checkins').insert({
+        'user_id': userId,
+        ...checkInData,
+      });
+    } catch (e) {
+      debugPrint('Error syncing check-in: $e - Queueing offline action');
+      await _syncQueue.queueAction('daily_checkin', checkInData);
+    }
+  }
+
+  /// Save custom workout to Supabase
+  Future<void> saveCustomWorkout(Map<String, dynamic> workoutData) async {
+    final userId = _auth.currentUserId;
+    if (userId == null) return;
+
+    try {
+      await _supabase.from('custom_workouts').upsert({
+        'user_id': userId,
+        ...workoutData
+      });
+    } catch (e) {
+      debugPrint('Error saving custom workout: $e');
+      // Queueing for complex objects like this needs careful handling, skipping for MVP simplicity usually
+    }
+  }
+
+  /// Delete custom workout from Supabase
+  Future<void> deleteCustomWorkout(String workoutId) async {
+    final userId = _auth.currentUserId;
+    if (userId == null) return;
+
+    try {
+      await _supabase.from('custom_workouts').delete().eq('id', workoutId).eq('user_id', userId);
+    } catch (e) {
+      debugPrint('Error deleting custom workout: $e');
     }
   }
 
@@ -252,9 +342,9 @@ class DatabaseService {
           .eq('user_id', userId)
           .gte('completed_at', startOfWeek.toIso8601String());
       
-      return (res as List).length;
+      return res.length; // Removed unnecessary cast
     } catch (e) {
-      print('Error getting weekly workout count: $e');
+      debugPrint('Error getting weekly workout count: $e');
       return 0;
     }
   }
@@ -273,7 +363,7 @@ class DatabaseService {
       // The response is a List of Maps
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print('Error finding matches: $e');
+      debugPrint('Error finding matches: $e');
       return [];
     }
   }
@@ -302,7 +392,7 @@ class DatabaseService {
           for (final entry in state) { // state is List<PresenceState>
             final presences = entry.presences; // List<Presence>
             if (presences.isNotEmpty) {
-               final data = presences.first.payload as Map<String, dynamic>; // payload is Map
+               final data = presences.first.payload; // payload is Map
                final uid = data['user_id'] as String?;
                if (uid != null) {
                  newState[uid] = data;
@@ -341,13 +431,13 @@ class DatabaseService {
     final userId = _auth.currentUserId;
     if (userId == null) return;
 
-    // 1. Check Balance (Mock check - ideally done via RLS or Function)
-    final profile = await _supabase.from('profiles').select('sweat_coins').eq('id', userId).single();
-    final currentCoins = profile['sweat_coins'] as int? ?? 0;
+    // 1. Check Balance (Skipping server check for MVP/Offline-First)
+    // final profile = await _supabase.from('profiles').select('sweat_coins').eq('id', userId).single();
+    // final currentCoins = profile['sweat_coins'] as int? ?? 0;
     
-    if (currentCoins < wagerAmount) {
-      throw Exception("Insufficient Sweat Coins! You have $currentCoins.");
-    }
+    // if (currentCoins < wagerAmount) {
+    //   throw Exception("Insufficient Sweat Coins! You have $currentCoins.");
+    // }
 
     // 2. Create Pact
     try {
@@ -360,12 +450,12 @@ class DatabaseService {
         'deadline': deadline.toUtc().toIso8601String(),
       });
 
-      // 3. Deduct Coins (Optimistic update - in real app, better to do via Postgres Function transaction)
-      await _supabase.from('profiles').update({
-        'sweat_coins': currentCoins - wagerAmount,
-      }).eq('id', userId);
+      // 3. Deduct Coins (Skipping server update for now)
+      // await _supabase.from('profiles').update({
+      //   'sweat_coins': currentCoins - wagerAmount,
+      // }).eq('id', userId);
     } catch (e) {
-      print('Error creating pact: $e - Queueing offline action');
+      debugPrint('Error creating pact: $e - Queueing offline action');
       // Note: We don't queue coin deduction separately as logic implies it happens with pact creation
       // Ideally this is atomic. For MVP queue re-attempts the whole pact flow.
       await _syncQueue.queueAction('create_pact', {

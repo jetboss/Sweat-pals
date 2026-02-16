@@ -13,7 +13,7 @@ class AvatarState {
   const AvatarState({
     this.mood = AvatarMood.neutral,
     this.level = 1,
-    this.primaryColor = Colors.blueAccent, // Default, will change based on level
+    this.primaryColor = Colors.blueAccent,
   });
 
   AvatarState copyWith({
@@ -29,23 +29,15 @@ class AvatarState {
   }
 }
 
-final avatarProvider = StateNotifierProvider<AvatarNotifier, AvatarState>((ref) {
-  final progress = ref.watch(workoutProgressProvider);
-  return AvatarNotifier(progress);
-});
-
-class AvatarNotifier extends StateNotifier<AvatarState> {
-  final WorkoutProgress progress;
-
-  AvatarNotifier(this.progress) : super(const AvatarState()) {
-    _updateState();
+class AvatarNotifier extends Notifier<AvatarState> {
+  @override
+  AvatarState build() {
+    final progress = ref.watch(workoutProgressProvider);
+    return _calculateState(progress);
   }
 
-  void _updateState() {
-    // 1. Determine Level based on Total Workouts (or Streak)
-    // Level 1: 0-5 workouts
-    // Level 2: 6-15 workouts
-    // Level 3: 16+ workouts
+  AvatarState _calculateState(WorkoutProgress progress) {
+    // 1. Determine Level based on Total Workouts
     int newLevel = 1;
     if (progress.totalWorkoutsCompleted > 15) {
       newLevel = 3;
@@ -64,7 +56,6 @@ class AvatarNotifier extends StateNotifier<AvatarState> {
     // 3. Determine Mood based on recent activity
     AvatarMood newMood = AvatarMood.neutral;
     
-    // Check if worked out today
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     if (progress.lastWorkoutDate != null) {
@@ -79,10 +70,14 @@ class AvatarNotifier extends StateNotifier<AvatarState> {
       }
     }
 
-    state = state.copyWith(
+    return AvatarState(
       level: newLevel,
       primaryColor: newColor,
       mood: newMood,
     );
   }
 }
+
+final avatarProvider = NotifierProvider<AvatarNotifier, AvatarState>(() {
+  return AvatarNotifier();
+});

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/workout.dart';
@@ -56,7 +57,9 @@ class _CreateWorkoutScreenState extends ConsumerState<CreateWorkoutScreen> {
       );
 
       ref.read(workoutsProvider.notifier).saveCustomWorkout(newWorkout);
-      Navigator.pop(context);
+      Navigator.pop(context); // Keep pop for now or use context.pop() if imported. 
+      // Better: context.pop();
+      if (mounted) context.pop();
     }
   }
 
@@ -164,27 +167,100 @@ class _CreateWorkoutScreenState extends ConsumerState<CreateWorkoutScreen> {
   }
 }
 
-class _AddExerciseDialog extends StatefulWidget {
+class _AddExerciseDialog extends ConsumerStatefulWidget {
   final Function(Exercise) onAdd;
 
   const _AddExerciseDialog({required this.onAdd});
 
   @override
-  State<_AddExerciseDialog> createState() => _AddExerciseDialogState();
+  ConsumerState<_AddExerciseDialog> createState() => _AddExerciseDialogState();
 }
 
-class _AddExerciseDialogState extends State<_AddExerciseDialog> {
+class _AddExerciseDialogState extends ConsumerState<_AddExerciseDialog> {
   final _nameController = TextEditingController();
   final _instructionsController = TextEditingController();
   bool _isTimeBased = true;
   double _duration = 30;
   double _reps = 10;
+  bool _isLowImpact = false;
+
+  void _showLibraryPicker() {
+    final library = ref.read(workoutsProvider.notifier).getAllUniqueExercises();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // For rounded corners
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "Exercise Library",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: library.length,
+                separatorBuilder: (ctx, index) => const Divider(height: 1),
+                itemBuilder: (ctx, index) {
+                  final ex = library[index];
+                  return ListTile(
+                    title: Text(ex.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                      ex.isLowImpact ? 'Creating custom (Low Impact)' : 'Standard',
+                      style: TextStyle(fontSize: 12, color: ex.isLowImpact ? Colors.green : Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                    onTap: () {
+                      setState(() {
+                        _nameController.text = ex.name;
+                        _instructionsController.text = ex.instructions;
+                        _isTimeBased = ex.durationSeconds > 0;
+                        if (_isTimeBased) {
+                          _duration = ex.durationSeconds.toDouble();
+                        } else {
+                          // Default to 10 reps if rep based, or use ex.reps if > 0
+                          _reps = ex.reps > 0 ? ex.reps.toDouble() : 10;
+                        }
+                        _isLowImpact = ex.isLowImpact;
+                      });
+                      ctx.pop();
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: AppColors.cardBackground,
-      title: const Text('Add Exercise', style: TextStyle(color: Colors.white)),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Add Exercise', style: TextStyle(color: Colors.white)),
+          IconButton(
+            icon: const Icon(Icons.library_books, color: AppColors.primary),
+            tooltip: "Choose from Library",
+            onPressed: _showLibraryPicker,
+          ),
+        ],
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -234,18 +310,30 @@ class _AddExerciseDialogState extends State<_AddExerciseDialog> {
                 onChanged: (val) => setState(() => _reps = val),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+             Row(
+               children: [
+                 Checkbox(
+                   value: _isLowImpact, 
+                   onChanged: (val) => setState(() => _isLowImpact = val ?? false),
+                   fillColor: WidgetStateProperty.resolveWith((states) => AppColors.primary),
+                 ),
+                 const Text("Low Impact / Knee Friendly", style: TextStyle(color: Colors.white70, fontSize: 12)),
+               ],
+             ),
+            const SizedBox(height: 8),
              TextField(
-              controller: _instructionsController,
+               controller: _instructionsController,
                style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Instructions', labelStyle: TextStyle(color: Colors.grey)),
+               decoration: const InputDecoration(labelText: 'Instructions', labelStyle: TextStyle(color: Colors.grey)),
+               maxLines: 2,
             ),
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
           child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
         ),
         ElevatedButton(
@@ -257,9 +345,10 @@ class _AddExerciseDialogState extends State<_AddExerciseDialog> {
                 durationSeconds: _isTimeBased ? _duration.toInt() : 0,
                 reps: _isTimeBased ? 0 : _reps.toInt(),
                 instructions: _instructionsController.text.isNotEmpty ? _instructionsController.text : 'Do the exercise.',
+                isLowImpact: _isLowImpact,
               );
               widget.onAdd(ex);
-              Navigator.pop(context);
+              context.pop();
             }
           },
           child: const Text('Add', style: TextStyle(color: Colors.black)),

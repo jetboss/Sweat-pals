@@ -1,45 +1,46 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class OnboardingState {
-  final String? avatarUrl; // For MVP, we might store a local asset path or ID
-  final String? journalEntry;
-  final bool pledgeAccepted;
+  final String name;
+  final String? avatarUrl;
+  final String fitnessLevel;
 
   OnboardingState({
+    this.name = '',
     this.avatarUrl,
-    this.journalEntry,
-    this.pledgeAccepted = false,
+    this.fitnessLevel = 'beginner',
   });
 
   OnboardingState copyWith({
+    String? name,
     String? avatarUrl,
-    String? journalEntry,
-    bool? pledgeAccepted,
+    String? fitnessLevel,
   }) {
     return OnboardingState(
+      name: name ?? this.name,
       avatarUrl: avatarUrl ?? this.avatarUrl,
-      journalEntry: journalEntry ?? this.journalEntry,
-      pledgeAccepted: pledgeAccepted ?? this.pledgeAccepted,
+      fitnessLevel: fitnessLevel ?? this.fitnessLevel,
     );
   }
 }
 
-class OnboardingNotifier extends StateNotifier<OnboardingState> {
-  OnboardingNotifier() : super(OnboardingState());
+class OnboardingNotifier extends Notifier<OnboardingState> {
+  @override
+  OnboardingState build() => OnboardingState();
+
+  void setName(String name) {
+    state = state.copyWith(name: name);
+  }
 
   void setAvatar(String url) {
     state = state.copyWith(avatarUrl: url);
   }
 
-  void setJournalEntry(String entry) {
-    state = state.copyWith(journalEntry: entry);
-  }
-
-  void acceptPledge() {
-    state = state.copyWith(pledgeAccepted: true);
+  void setFitnessLevel(String level) {
+    state = state.copyWith(fitnessLevel: level);
   }
 }
 
-final onboardingStateProvider = StateNotifierProvider<OnboardingNotifier, OnboardingState>((ref) {
+final onboardingStateProvider = NotifierProvider<OnboardingNotifier, OnboardingState>(() {
   return OnboardingNotifier();
 });

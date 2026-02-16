@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
+
 
 /// A beautiful animated streak counter with flame animation and confetti celebrations
 class AnimatedStreakCounter extends StatefulWidget {
@@ -23,7 +23,7 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
   late AnimationController _pulseController;
   late AnimationController _numberController;
   
-  int _previousStreak = 0;
+
 
   // Milestone streaks that trigger confetti
   static const List<int> _milestones = [7, 14, 21, 30, 45, 60, 90, 100, 150, 200, 365];
@@ -31,7 +31,7 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
   @override
   void initState() {
     super.initState();
-    _previousStreak = widget.streak;
+
     
     _flameController = AnimationController(
       vsync: this,
@@ -58,7 +58,7 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
       _numberController.forward(from: 0);
       _pulseController.forward(from: 0);
       
-      _previousStreak = widget.streak;
+
     }
   }
 
@@ -147,7 +147,7 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.orange.withOpacity(
+                                  color: Colors.orange.withValues(alpha:
                                     0.3 + 0.2 * sin(_flameController.value * 2 * pi),
                                   ),
                                   blurRadius: 30,
@@ -165,7 +165,7 @@ class _AnimatedStreakCounterState extends State<AnimatedStreakCounter>
                                 colors: [
                                   Colors.red,
                                   Colors.orange,
-                                  Colors.yellow.withOpacity(
+                                  Colors.yellow.withValues(alpha:
                                     0.8 + 0.2 * sin(_flameController.value * 4 * pi),
                                   ),
                                 ],

@@ -20,7 +20,7 @@ class AppConstants {
   static const String workoutsBox = 'workouts_box';
   static const String trackingBox = 'tracking_box';
   static const String journalBox = 'journal_box';
-  static const String habitTrackingBox = 'habit_tracking_box';
+  static const String dailyCheckInBox = 'daily_checkin_box'; // Was habitTrackingBox
   static const String morningPromptBox = 'morning_prompt_box';
   static const String weeklyReviewBox = 'weekly_review_box';
   static const String progressPhotosBox = 'progress_photos_box';
